@@ -28,13 +28,8 @@ export class Prevalence<
   }
 
   async execute(transaction: T): Promise<void> {
-    const now = this.clock();
-    await this.persister.appendToJournal({
-      timestamp: now,
-      transaction,
-    });
-    transaction.execute(this.model, {
-      clock: this.clock,
-    });
+    const timestamp = this.clock();
+    await this.persister.appendToJournal({ timestamp, transaction });
+    transaction.execute(this.model, { clock: () => timestamp });
   }
 }
