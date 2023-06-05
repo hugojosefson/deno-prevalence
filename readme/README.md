@@ -1,6 +1,7 @@
 # kv_prevalence
 
-[System prevalence](https://en.wikipedia.org/wiki/System_prevalence) as a typed library, using a [Deno.Kv](https://deno.com/kv) database for storage.
+[System prevalence](https://en.wikipedia.org/wiki/System_prevalence) as a typed
+library, using a [Deno.Kv](https://deno.com/kv) database for storage.
 
 [![deno module](https://shield.deno.dev/x/kv_prevalence)](https://deno.land/x/kv_prevalence)
 [![CI](https://github.com/hugojosefson/deno-kv-prevalence/actions/workflows/ci.yaml/badge.svg)](https://github.com/hugojosefson/deno-kv-prevalence/actions/workflows/ci.yaml)
