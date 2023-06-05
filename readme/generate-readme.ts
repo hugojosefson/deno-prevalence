@@ -19,7 +19,7 @@ import {
  *   with the contents of the file, relative to the currently parsed file. The
  *   whole line will be replaced.
  * - Any shebang line at the start of any input file, will be removed.
- * - For any occurrence of /\sfrom\s+"(\..*)"/ the path will be extracted and resolved from the currently parsed file, and then resolved to a relative path from the root of the git repo, then the whole `from` clause will be replaced with `from "https://deno.land/x/kv_entity/${relativePathFromGitRoot}"`.
+ * - For any occurrence of /\sfrom\s+"(\..*)"/ the path will be extracted and resolved from the currently parsed file, and then resolved to a relative path from the root of the git repo, then the whole `from` clause will be replaced with `from "https://deno.land/x/kv_prevalence/${relativePathFromGitRoot}"`.
  * - The resulting text will be written to stdout.
  */
 async function main() {
@@ -81,7 +81,7 @@ function processLineForImport(
       const step2: string = relative(gitRoot, step1);
       return line.replace(
         /\sfrom\s+"(\..*)"/,
-        ` from "https://deno.land/x/kv_entity/${step2}"`,
+        ` from "https://deno.land/x/kv_prevalence/${step2}"`,
       );
     }
     return line;
