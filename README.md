@@ -22,6 +22,7 @@ import {
   JsonMarshaller,
   KvPersister,
   Marshaller,
+  Persister,
   Prevalence,
   Transaction,
 } from "https://deno.land/x/kv_prevalence/mod.ts";
@@ -42,18 +43,31 @@ class AddPost implements Transaction<Model> {
   }
 }
 
+class RemovePost implements Transaction<Model> {
+  constructor(private readonly id: string) {}
+  execute(model: Model): void {
+    delete model.posts[this.id];
+  }
+}
+
+type PostTransaction = AddPost | RemovePost;
+
 const kv = await Deno.openKv("example-person-invoice.db");
 const marshaller: Marshaller<Model, string> = new JsonMarshaller<Model>();
-const prevalence = new Prevalence<Model, AddPost>(
-  { posts: {} },
-  new KvPersister<Model, string>(
-    kv,
-    [],
-    marshaller,
-  ),
+const persister: Persister<Model> = new KvPersister<Model, string>(
+  kv,
+  [],
+  marshaller,
+);
+const defaultInitialModel: Model = { posts: {} };
+const prevalence = await Prevalence.create<Model, PostTransaction>(
+  persister,
+  defaultInitialModel,
 );
 await prevalence.execute(new AddPost({ id: "post#1", subject: "Lorem" }));
 await prevalence.execute(new AddPost({ id: "post#2", subject: "Ipsum" }));
+await prevalence.execute(new AddPost({ id: "post#3", subject: "Dolor" }));
+await prevalence.execute(new RemovePost("post#2"));
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 

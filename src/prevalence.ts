@@ -13,18 +13,22 @@ export class Prevalence<
   M,
   T extends Transaction<M>,
 > {
-  readonly model: M;
-  private readonly persister: Persister<M>;
-  private readonly clock: Clock;
+  private constructor(
+    readonly model: M,
+    private readonly persister: Persister<M>,
+    private readonly clock: Clock = Date.now,
+  ) {}
 
-  constructor(
-    initialModel: M,
+  static async create<
+    M,
+    T extends Transaction<M>,
+  >(
     persister: Persister<M>,
+    defaultInitialModel: M,
     clock: Clock = Date.now,
-  ) {
-    this.model = initialModel;
-    this.persister = persister;
-    this.clock = clock;
+  ): Promise<Prevalence<M, T>> {
+    const model: M = await persister.loadModel(defaultInitialModel);
+    return new Prevalence<M, T>(model, persister, clock);
   }
 
   async execute(transaction: T): Promise<void> {
