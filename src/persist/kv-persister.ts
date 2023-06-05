@@ -1,6 +1,6 @@
 import { JournalEntry, KvValue } from "../types.ts";
 import { Persister } from "./persister.ts";
-import { Marshaller } from "./marshaller.ts";
+import { Marshaller } from "../marshall/marshaller.ts";
 
 const MODEL_PREFIX: Deno.KvKey = ["model"];
 const JOURNAL_PREFIX: Deno.KvKey = ["journal"];

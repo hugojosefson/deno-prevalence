@@ -18,11 +18,13 @@ Please see the
 ## Example usage
 
 ```typescript
-import { Prevalence } from "https://deno.land/x/kv_prevalence/mod.ts";
-import { Transaction } from "https://deno.land/x/kv_prevalence/src/types.ts";
-import { KvPersister } from "https://deno.land/x/kv_prevalence/src/persist/kv-persister.ts";
-import { JsonMarshaller } from "https://deno.land/x/kv_prevalence/src/persist/json-marshaller.ts";
-import { Marshaller } from "https://deno.land/x/kv_prevalence/src/persist/marshaller.ts";
+import {
+  JsonMarshaller,
+  KvPersister,
+  Marshaller,
+  Prevalence,
+  Transaction,
+} from "https://deno.land/x/kv_prevalence/mod.ts";
 
 type Post = {
   id: string;

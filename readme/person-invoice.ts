@@ -1,9 +1,11 @@
 #!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
-import { Prevalence } from "../mod.ts";
-import { Transaction } from "../src/types.ts";
-import { KvPersister } from "../src/persist/kv-persister.ts";
-import { JsonMarshaller } from "../src/persist/json-marshaller.ts";
-import { Marshaller } from "../src/persist/marshaller.ts";
+import {
+  JsonMarshaller,
+  KvPersister,
+  Marshaller,
+  Prevalence,
+  Transaction,
+} from "../mod.ts";
 
 type Post = {
   id: string;
