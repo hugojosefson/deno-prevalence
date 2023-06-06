@@ -1,14 +1,18 @@
-import { JournalEntry } from "../types.ts";
-import { Persister } from "./persister.ts";
+import { Commands, JournalEntry } from "../types.ts";
+import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 
 /**
  * Stores data in memory.
  * @implements {Persister}
  * @template M The type of the model.
  */
-export class MemoryPersister<M> implements Persister<M> {
+export class MemoryPersister<
+  M,
+  C extends Commands<M>,
+  CN extends keyof C,
+> implements Persister<M, C, CN> {
   private model: M | undefined = undefined;
-  private journal: JournalEntry<M>[] = [];
+  private journal: JournalEntry<M, C, CN>[] = [];
 
   loadModel(defaultInitialModel: M): Promise<M> {
     if (this.model === undefined) {
@@ -17,18 +21,23 @@ export class MemoryPersister<M> implements Persister<M> {
     return Promise.resolve(this.model);
   }
 
-  saveModelAndClearJournal(model: M): Promise<void> {
-    this.model = model;
-    this.journal = [];
-    return Promise.resolve();
-  }
-
-  loadJournal(): Promise<JournalEntry<M>[]> {
+  loadJournal(): Promise<JournalEntry<M, C, CN>[]> {
     return Promise.resolve(this.journal);
   }
 
-  appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {
+  appendToJournal(journalEntry: JournalEntry<M, C, CN>): Promise<void> {
     this.journal.push(journalEntry);
+    return Promise.resolve();
+  }
+
+  saveModelAndClearJournal(
+    model: M,
+    lastAppliedTimestamp: LastAppliedTimestamp,
+  ): Promise<void> {
+    this.model = model;
+    this.journal = lastAppliedTimestamp === DELETE_ALL
+      ? []
+      : this.journal.filter((entry) => entry.timestamp > lastAppliedTimestamp);
     return Promise.resolve();
   }
 }

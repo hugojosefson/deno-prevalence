@@ -1,13 +1,15 @@
 #!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
-import {
-  KvPersister,
-  Marshaller,
-  Persister,
-  Prevalence,
-  SerializrMarshaller,
-  Transaction,
-} from "../mod.ts";
-import { Context } from "npm:serializr@3.0.2/core/Context";
+class User {
+  readonly uuid: number;
+
+  displayName: string;
+
+  constructor(uuid: number, displayName: string) {
+    this.uuid = uuid;
+    this.displayName = displayName;
+  }
+}
+const alice = new User(1, "Alice");
 
 type Post = {
   id: string;

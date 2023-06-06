@@ -1,13 +1,21 @@
-import { Clock } from "./types.ts";
+import { Clock, Commands } from "./types.ts";
 import { Persister } from "./persist/persister.ts";
 
 /**
  * TypeScript implementation for Deno of the Prevalence design pattern, as
  * introduced by Klaus Wüstefeld in 1998 with Prevayler.
  *
- * Uses the module "npm:serializr" to serialize and deserialize the model, and transaction objects.
+ * Expects Commands to serialize/deserialize arguments into/from a string, and to mutate the
+ * model.
  *
- * Saves journal of transactions, and snapshots of the model, to Deno.Kv.
+ * Saves periodical snapshots of the model, and journal of executed commands
+ * since last snapshot, using a Persister.
+ *
+ * The Persister uses a Marshaller to serialize/deserialize the model and the
+ * journal.
+ *
+ * @see https://en.wikipedia.org/wiki/System_prevalence
+ * @see https://prevayler.org/
  */
 export class Prevalence<
   M,
@@ -16,7 +24,7 @@ export class Prevalence<
   private constructor(
     readonly model: M,
     private readonly commands: C,
-    private readonly persister: Persister<M>,
+    private readonly persister: Persister<M, C, keyof C>,
     private readonly clock: Clock = Date.now,
   ) {}
 
@@ -26,28 +34,32 @@ export class Prevalence<
   >(
     defaultInitialModel: M,
     commands: C,
-    persister: Persister<M>,
+    persister: Persister<M, C, keyof C>,
     clock: Clock = Date.now,
   ): Promise<Prevalence<M, C>> {
     const model: M = await persister.loadModel(defaultInitialModel);
     return new Prevalence<M, C>(model, commands, persister, clock);
   }
 
-  async execute<A extends unknown[]>(
-    commandName: keyof C,
+  async execute<
+    CN extends keyof C,
+    A extends Parameters<C[CN]["execute"]>[1],
+  >(
+    commandName: CN,
     args: A,
   ): Promise<void> {
-    const timestamp = this.clock();
-    await this.persister.appendToJournal({ timestamp, commandName, args });
-    this.commands[commandName](this.model, args, () => timestamp);
+    const command: C[CN] = this.commands[commandName];
+    const argsString: string = command.argsToString(args);
+    const timestamp: number = this.clock();
+    await this.persister.appendToJournal({
+      commandName,
+      argsString,
+      timestamp,
+    });
+    command.execute(
+      this.model,
+      command.stringToArgs(argsString),
+      () => timestamp,
+    );
   }
 }
-
-type CommandFunction<M, A extends unknown[]> = (
-  model: M,
-  args: A,
-  clock: Clock,
-) => void;
-type Commands<M> = {
-  [commandName: string]: CommandFunction<M, unknown[]>;
-};
