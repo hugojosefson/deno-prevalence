@@ -11,7 +11,7 @@ const JOURNAL_PREFIX: Deno.KvKey = ["journal"];
  * @template M The type of the model.
  * @template D The type of the data.
  */
-export class KvPersister<M, D extends KvValue> implements Persister<M> {
+export class KvPersister<M, D extends KvValue<D>> implements Persister<M> {
   private readonly modelKey: Deno.KvKey;
   private readonly journalKey: Deno.KvKey;
   constructor(

@@ -27,7 +27,7 @@ export type JSONValue =
 /**
  * Things that Deno.Kv can store as values.
  */
-export type KvValue =
+export type KvValue<T extends KvValue<T>> =
   | undefined
   | null
   | boolean
@@ -35,9 +35,9 @@ export type KvValue =
   | string
   | bigint
   | Uint8Array
-  | Array<unknown>
-  | Record<string | number, unknown>
-  | Map<unknown, unknown>
-  | Set<unknown>
+  | T[]
+  | Record<string | number, T>
+  | Map<T, T>
+  | Set<T>
   | Date
   | RegExp;
