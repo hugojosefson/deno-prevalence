@@ -1,26 +1,24 @@
-import {
-  ClazzOrModelSchema,
-  deserialize,
-  identifier,
-  list,
-  ModelSchema,
-  object,
-  primitive,
-  PropSerializer,
-  reference,
-  serializable,
-  serialize,
-  subSchema,
-} from "npm:serializr@3.0.2";
-
 export type WithToJSON = { toJSON: () => JSONValue };
-export type JSONSerializable = WithToJSON | JSONValue
+export type fromJSON<T> = (data: JSONValue) => T;
+export type WithFromJSON<T> = { fromJSON: fromJSON<T> };
+export type WithToFromJSON<T> = WithToJSON & WithFromJSON<T>;
+export type JSONSerializable<T> = WithToFromJSON<T> | JSONValue;
 
-class User implements WithToJSON {
-  @serializable(identifier())
+function isWithToJSON<T>(obj: unknown): obj is WithToJSON {
+  return typeof obj === "object" && obj !== null && "toJSON" in obj;
+}
+
+function isWithFromJSON<T>(obj: unknown): obj is WithFromJSON<T> {
+  return typeof obj === "object" && obj !== null && "fromJSON" in obj;
+}
+
+function isWithToFromJSON<T>(obj: unknown): obj is WithToFromJSON<T> {
+  return isWithToJSON(obj) && isWithFromJSON(obj);
+}
+
+class User implements WithToFromJSON<User> {
   readonly uuid: number;
 
-  @serializable
   displayName: string;
 
   constructor(uuid: number, displayName: string) {
@@ -34,13 +32,84 @@ class User implements WithToJSON {
       displayName: this.displayName,
     };
   }
+
+  fromJSON(data: { uuid: number; displayName: string }): User {
+    return new User(data.uuid, data.displayName);
+  }
 }
 
 class UsersModel {
-  @serializable(list(object(User)))
   users: User[] = [];
 }
 export type Clock = () => number;
+
+export class Command<M, A extends JSONSerializable<unknown>[]> {
+  readonly name: string;
+  readonly execute: (model: M, args: A, clock: Clock) => void;
+
+  constructor(
+    name: string,
+    execute: (model: M, args: A, clock: Clock) => void,
+  ) {
+    this.name = name;
+    this.execute = execute;
+  }
+}
+
+export class AddUserCommand extends Command<UsersModel, [User]> {
+  constructor() {
+    super(AddUserCommand.name, (model, [user]) => {
+      model.users.push(user);
+    });
+  }
+}
+
+export class RemoveUserCommand extends Command<UsersModel, [number]> {
+  constructor() {
+    super(RemoveUserCommand.name, (model, [uuid]) => {
+      model.users = model.users.filter((user) => user.uuid !== uuid);
+    });
+  }
+}
+
+export class RenameUserCommand extends Command<UsersModel, [number, string]> {
+  constructor() {
+    super(RenameUserCommand.name, (model, [uuid, displayName]) => {
+      const user = model.users.find((user) => user.uuid === uuid);
+      if (user) {
+        user.displayName = displayName;
+      }
+    });
+  }
+}
+
+export class JournalEntry<
+  M,
+  C extends Command<M, A>,
+  A extends JSONSerializable<unknown>[],
+> implements WithToFromJSON<JournalEntry<M, C, A>> {
+  readonly commandName: C["name"];
+  readonly timestamp: number;
+  readonly args: A;
+
+  constructor(
+    commandName: C["name"],
+    timestamp: number,
+    args: A,
+  ) {
+    this.commandName = commandName;
+    this.timestamp = timestamp;
+    this.args = args;
+  }
+
+  toJSON(): JSONValue {
+    return {
+      commandName: this.commandName,
+      timestamp: this.timestamp,
+      args: this.args.map((arg) => isWithToFromJSON(arg) ? arg.toJSON() : arg),
+    };
+  }
+}
 
 /**
  * a Transaction instance is JSONSerializable.
@@ -54,20 +123,17 @@ export abstract class Transaction<
   M,
   A extends JSONSerializable[] = [],
 > implements WithToJSON {
-  @serializable(primitive())
   readonly timestamp?: number;
 
   abstract readonly args: A;
-  abstract execute (model: M, clock: Clock): void;
+  abstract execute(model: M, clock: Clock): void;
   abstract toJSON(): JSONValue;
 }
 
-@subSchema("AddUserTransaction")
 export class AddUserTransaction extends Transaction<UsersModel, [User]> {
-  @serializable(list(object(User)))
   readonly args: [User];
 
-  execute (model: UsersModel, _clock: Clock):void{
+  execute(model: UsersModel, _clock: Clock): void {
     model.users.push(this.args[0]);
   }
 
@@ -80,17 +146,15 @@ export class AddUserTransaction extends Transaction<UsersModel, [User]> {
     return {
       timestamp: this.timestamp,
       args: this.args.map((arg) => arg.toJSON()),
-    } as JSONValue
+    } as JSONValue;
   }
 }
-
-
 
 const alice = new User(1, "Alice");
 const addAlice = new AddUserTransaction(alice);
 const serializedAddAlice = serialize(addAlice);
 const deserializedAddAlice = deserialize(
-AddUserTransaction,
+  AddUserTransaction,
   serializedAddAlice,
 );
 
