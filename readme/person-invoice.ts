@@ -1,21 +1,22 @@
 #!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
 import {
-  JsonMarshaller,
   KvPersister,
   Marshaller,
   Persister,
   Prevalence,
+  SerializrMarshaller,
   Transaction,
 } from "../mod.ts";
+import { Context } from "npm:serializr@3.0.2/core/Context";
 
 type Post = {
   id: string;
   subject: string;
 };
 
-type Model = {
-  posts: Record<string, Post>;
-};
+class Model {
+  constructor(readonly posts: Record<string, Post>) {}
+}
 
 class AddPost implements Transaction<Model> {
   constructor(private readonly post: Post) {}
@@ -34,8 +35,18 @@ class RemovePost implements Transaction<Model> {
 type PostTransaction = AddPost | RemovePost;
 
 const kv = await Deno.openKv("example-person-invoice.db");
-const marshaller: Marshaller<Model, string> = new JsonMarshaller<Model>();
-const persister: Persister<Model> = new KvPersister<Model, string>(
+const marshaller: Marshaller<Model, Uint8Array> = new SerializrMarshaller<
+  Model
+>(
+  {
+    targetClass: Model,
+    props: {
+      posts: true,
+    },
+    factory: (context: Context<Model>) => new Model(context.json.posts),
+  },
+);
+const persister: Persister<Model> = new KvPersister<Model, Uint8Array>(
   kv,
   [],
   marshaller,

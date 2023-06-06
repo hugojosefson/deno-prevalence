@@ -19,13 +19,14 @@ Please see the
 
 ```typescript
 import {
-  JsonMarshaller,
   KvPersister,
   Marshaller,
   Persister,
   Prevalence,
+  SerializrMarshaller,
   Transaction,
 } from "https://deno.land/x/kv_prevalence/mod.ts";
+import { JournalEntryClass } from "https://deno.land/x/kv_prevalence/src/types.ts";
 
 type Post = {
   id: string;
@@ -35,6 +36,10 @@ type Post = {
 type Model = {
   posts: Record<string, Post>;
 };
+
+class ModelClass implements Model {
+  constructor(readonly posts: Record<string, Post>) {}
+}
 
 class AddPost implements Transaction<Model> {
   constructor(private readonly post: Post) {}
@@ -53,8 +58,13 @@ class RemovePost implements Transaction<Model> {
 type PostTransaction = AddPost | RemovePost;
 
 const kv = await Deno.openKv("example-person-invoice.db");
-const marshaller: Marshaller<Model, string> = new JsonMarshaller<Model>();
-const persister: Persister<Model> = new KvPersister<Model, string>(
+const marshaller: Marshaller<Model, Uint8Array> = new SerializrMarshaller<
+  Model
+>(
+  ModelClass,
+  JournalEntryClass,
+);
+const persister: Persister<Model> = new KvPersister<Model, Uint8Array>(
   kv,
   [],
   marshaller,

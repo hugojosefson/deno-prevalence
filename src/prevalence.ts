@@ -16,6 +16,7 @@ export class Prevalence<
   private constructor(
     readonly model: M,
     private readonly persister: Persister<M>,
+    private readonly transactions: Record<string, Transaction<M>>,
     private readonly clock: Clock = Date.now,
   ) {}
 
