@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "uuid": 1,
+      "displayName": "Alice",
+      "friends": [2]
+    },
+    {
+      "uuid": 2,
+      "displayName": "Bob",
+      "friends": [1]
+    }
+  ],
+  "messages": [
+    {
+      "uuid": 10,
+      "message": "Hello World!",
+      "author": 1,
+      "comments": [20]
+    },
+    {
+      "uuid": 20,
+      "message": "Hi Alice!",
+      "author": 2,
+      "comments": []
+    }
+  ]
+}
