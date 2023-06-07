@@ -31,4 +31,10 @@ export interface Persister<M, C extends Commands<M>, CN extends keyof C> {
     model: M,
     lastAppliedTimestamp: LastAppliedTimestamp,
   ): Promise<void>;
+
+  /**
+   * Load the last applied timestamp from the persister.
+   * @returns A promise that resolves to the last applied timestamp, or null if there is none.
+   */
+  loadLastAppliedTimestamp(): Promise<number | null>;
 }

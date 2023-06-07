@@ -9,15 +9,17 @@ const MODEL_PREFIX: Deno.KvKey = ["model"];
 const JOURNAL_ENTRIES_PREFIX: Deno.KvKey = ["journal", "entries"];
 
 /** Where the journal start timestamp is stored in the KV store. Any journal entries before this timestamp are invalid, and should be deleted. */
-const JOURNAL_START_TIMESTAMP_PREFIX: Deno.KvKey = [
+const JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX: Deno.KvKey = [
   "journal",
-  "startTimestamp",
+  "lastAppliedTimestamp",
 ];
 
 /**
  * Stores data in Deno.Kv.
  * @implements {Persister}
  * @template M The type of the model.
+ * @template C The type of the commands.
+ * @template CN The type of the command names.
  * @template D The type of the data.
  */
 export class KvPersister<
@@ -28,7 +30,7 @@ export class KvPersister<
 > implements Persister<M, C, CN> {
   private readonly modelKey: Deno.KvKey;
   private readonly journalEntriesKey: Deno.KvKey;
-  private readonly journalStartTimestampKey: Deno.KvKey;
+  private readonly journalLastAppliedTimestampKey: Deno.KvKey;
   constructor(
     private readonly kv: Deno.Kv,
     private readonly prefix: Deno.KvKey,
@@ -36,9 +38,9 @@ export class KvPersister<
   ) {
     this.modelKey = [...prefix, ...MODEL_PREFIX];
     this.journalEntriesKey = [...prefix, ...JOURNAL_ENTRIES_PREFIX];
-    this.journalStartTimestampKey = [
+    this.journalLastAppliedTimestampKey = [
       ...prefix,
-      ...JOURNAL_START_TIMESTAMP_PREFIX,
+      ...JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX,
     ];
   }
 
@@ -51,12 +53,12 @@ export class KvPersister<
       await this.kv.atomic()
         .set(this.modelKey, serializedModel)
         .delete(this.journalEntriesKey)
-        .delete(this.journalStartTimestampKey)
+        .delete(this.journalLastAppliedTimestampKey)
         .commit();
     } else {
       await this.kv.atomic()
         .set(this.modelKey, serializedModel)
-        .set(this.journalStartTimestampKey, lastAppliedTimestamp)
+        .set(this.journalLastAppliedTimestampKey, lastAppliedTimestamp)
         .commit();
       const journalResponse: Deno.KvListIterator<D> = await this.kv.list({
         prefix: this.journalEntriesKey,
@@ -107,5 +109,13 @@ export class KvPersister<
         this.marshaller.serializeJournalEntry(journalEntry),
       )
       .commit();
+  }
+
+  async loadLastAppliedTimestamp(): Promise<number | null> {
+    const lastAppliedTimestampResponse: Deno.KvEntryMaybe<number> = await this
+      .kv.get(
+        this.journalLastAppliedTimestampKey,
+      );
+    return lastAppliedTimestampResponse.value;
   }
 }

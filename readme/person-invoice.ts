@@ -1,4 +1,11 @@
 #!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
+import { Clock, Command } from "../src/types.ts";
+import { Marshaller } from "../src/marshall/marshaller.ts";
+import { JsonMarshaller } from "../src/marshall/json-marshaller.ts";
+import { Persister } from "../src/persist/persister.ts";
+import { KvPersister } from "../src/persist/kv-persister.ts";
+import { Prevalence } from "../mod.ts";
+
 class User {
   readonly uuid: number;
 
@@ -20,34 +27,48 @@ class Model {
   constructor(readonly posts: Record<string, Post>) {}
 }
 
-class AddPost implements Transaction<Model> {
-  constructor(private readonly post: Post) {}
-  execute(model: Model): void {
-    model.posts[this.post.id] = this.post;
-  }
-}
-
-class RemovePost implements Transaction<Model> {
-  constructor(private readonly id: string) {}
-  execute(model: Model): void {
-    delete model.posts[this.id];
-  }
-}
-
-type PostTransaction = AddPost | RemovePost;
-
-const kv = await Deno.openKv("example-person-invoice.db");
-const marshaller: Marshaller<Model, Uint8Array> = new SerializrMarshaller<
-  Model
->(
-  {
-    targetClass: Model,
-    props: {
-      posts: true,
-    },
-    factory: (context: Context<Model>) => new Model(context.json.posts),
+type AddPostCommand = Command<Model, [Post]>;
+const addPost: AddPostCommand = {
+  execute: (model: Model, args: [Post], _clock: Clock) => {
+    const [post] = args;
+    model.posts[post.id] = post;
   },
-);
+  argsToString: (args: [Post]) => {
+    const [post] = args;
+    return JSON.stringify(post);
+  },
+  stringToArgs: (argsString: string) => {
+    const post = JSON.parse(argsString);
+    return [post];
+  },
+};
+type RemovePostCommand = Command<Model, [string]>;
+const removePost: RemovePostCommand = {
+  execute: (model: Model, args: [string], _clock: Clock) => {
+    const [postId] = args;
+    delete model.posts[postId];
+  },
+  argsToString: (args: [string]) => {
+    const [postId] = args;
+    return postId;
+  },
+  stringToArgs: (argsString: string) => {
+    return [argsString];
+  },
+};
+type PostCommand = AddPostCommand | RemovePostCommand;
+const commands: Record<"addPost" | "removePost", PostCommand> = {
+  addPost,
+  removePost,
+};
+
+const marshaller: Marshaller<
+  Model,
+  Record<"addPost" | "removePost", PostCommand>,
+  keyof typeof commands,
+  string
+> = new JsonMarshaller<Model, typeof commands, keyof typeof commands, string>();
+const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
 const persister: Persister<Model> = new KvPersister<Model, Uint8Array>(
   kv,
   [],

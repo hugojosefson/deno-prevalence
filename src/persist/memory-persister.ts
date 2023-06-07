@@ -40,4 +40,12 @@ export class MemoryPersister<
       : this.journal.filter((entry) => entry.timestamp > lastAppliedTimestamp);
     return Promise.resolve();
   }
+
+  loadLastAppliedTimestamp(): Promise<number | null> {
+    return Promise.resolve(
+      this.journal.length === 0
+        ? null
+        : this.journal[this.journal.length - 1].timestamp,
+    );
+  }
 }

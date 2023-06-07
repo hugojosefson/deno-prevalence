@@ -18,52 +18,76 @@ Please see the
 ## Example usage
 
 ```typescript
-import {
-  KvPersister,
-  Marshaller,
-  Persister,
-  Prevalence,
-  SerializrMarshaller,
-  Transaction,
-} from "https://deno.land/x/kv_prevalence/mod.ts";
-import { JournalEntryClass } from "https://deno.land/x/kv_prevalence/src/types.ts";
+import { Clock, Command } from "https://deno.land/x/kv_prevalence/src/types.ts";
+import { Marshaller } from "https://deno.land/x/kv_prevalence/src/marshall/marshaller.ts";
+import { JsonMarshaller } from "https://deno.land/x/kv_prevalence/src/marshall/json-marshaller.ts";
+import { Persister } from "https://deno.land/x/kv_prevalence/src/persist/persister.ts";
+import { KvPersister } from "https://deno.land/x/kv_prevalence/src/persist/kv-persister.ts";
+import { Prevalence } from "https://deno.land/x/kv_prevalence/mod.ts";
+
+class User {
+  readonly uuid: number;
+
+  displayName: string;
+
+  constructor(uuid: number, displayName: string) {
+    this.uuid = uuid;
+    this.displayName = displayName;
+  }
+}
+const alice = new User(1, "Alice");
 
 type Post = {
   id: string;
   subject: string;
 };
 
-type Model = {
-  posts: Record<string, Post>;
-};
-
-class ModelClass implements Model {
+class Model {
   constructor(readonly posts: Record<string, Post>) {}
 }
 
-class AddPost implements Transaction<Model> {
-  constructor(private readonly post: Post) {}
-  execute(model: Model): void {
-    model.posts[this.post.id] = this.post;
-  }
-}
+type AddPostCommand = Command<Model, [Post]>;
+const addPost: AddPostCommand = {
+  execute: (model: Model, args: [Post], _clock: Clock) => {
+    const [post] = args;
+    model.posts[post.id] = post;
+  },
+  argsToString: (args: [Post]) => {
+    const [post] = args;
+    return JSON.stringify(post);
+  },
+  stringToArgs: (argsString: string) => {
+    const post = JSON.parse(argsString);
+    return [post];
+  },
+};
+type RemovePostCommand = Command<Model, [string]>;
+const removePost: RemovePostCommand = {
+  execute: (model: Model, args: [string], _clock: Clock) => {
+    const [postId] = args;
+    delete model.posts[postId];
+  },
+  argsToString: (args: [string]) => {
+    const [postId] = args;
+    return postId;
+  },
+  stringToArgs: (argsString: string) => {
+    return [argsString];
+  },
+};
+type PostCommand = AddPostCommand | RemovePostCommand;
+const commands: Record<"addPost" | "removePost", PostCommand> = {
+  addPost,
+  removePost,
+};
 
-class RemovePost implements Transaction<Model> {
-  constructor(private readonly id: string) {}
-  execute(model: Model): void {
-    delete model.posts[this.id];
-  }
-}
-
-type PostTransaction = AddPost | RemovePost;
-
-const kv = await Deno.openKv("example-person-invoice.db");
-const marshaller: Marshaller<Model, Uint8Array> = new SerializrMarshaller<
-  Model
->(
-  ModelClass,
-  JournalEntryClass,
-);
+const marshaller: Marshaller<
+  Model,
+  Record<"addPost" | "removePost", PostCommand>,
+  keyof typeof commands,
+  string
+> = new JsonMarshaller<Model, typeof commands, keyof typeof commands, string>();
+const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
 const persister: Persister<Model> = new KvPersister<Model, Uint8Array>(
   kv,
   [],
