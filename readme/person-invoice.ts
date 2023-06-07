@@ -96,10 +96,7 @@ const removeUser: RemoveUserCommand = {
   },
 };
 
-const commands: Record<
-  "addPost" | "removePost" | "addUser" | "removeUser",
-  Command<Model, [Post] | [string] | [User] | [number]>
-> = {
+const commands: Record<string, Command<Model, unknown[]>> = {
   addPost,
   removePost,
   addUser,

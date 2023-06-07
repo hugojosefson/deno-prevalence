@@ -1,4 +1,4 @@
-import { Clock, Commands } from "./types.ts";
+import { Clock, CommandNames, Commands } from "./types.ts";
 import { Persister } from "./persist/persister.ts";
 
 /**
@@ -19,22 +19,22 @@ import { Persister } from "./persist/persister.ts";
  */
 export class Prevalence<
   M,
-  C extends Commands<M, keyof C>,
+  C extends Commands<M, CommandNames<M, C>>,
 > {
   private constructor(
     readonly model: M,
     private readonly commands: C,
-    private readonly persister: Persister<M, C, keyof C>,
+    private readonly persister: Persister<M, C, CommandNames<M, C>>,
     private readonly clock: Clock = Date.now,
   ) {}
 
   static async create<
     M,
-    C extends Commands<M, CN>,
+    C extends Commands<M, CommandNames<M, C>>,
   >(
     defaultInitialModel: M,
     commands: C,
-    persister: Persister<M, C, keyof C>,
+    persister: Persister<M, C, CommandNames<M, C>>,
     clock: Clock = Date.now,
   ): Promise<Prevalence<M, C>> {
     const model: M = await persister.loadModel(defaultInitialModel);
@@ -42,8 +42,8 @@ export class Prevalence<
   }
 
   async execute<
-    CN extends keyof C & string,
     A extends Parameters<C[CN]["execute"]>[1],
+    CN extends CommandNames<M, C> = CommandNames<M, C>,
   >(
     commandName: CN,
     args: A,

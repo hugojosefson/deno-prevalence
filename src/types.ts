@@ -1,21 +1,27 @@
-export type CommandFunction<M, A extends unknown[]> = (
+export type CommandFunction<M, A> = (
   model: M,
   args: A,
   clock: Clock,
 ) => void;
 
-export type Command<M, A extends unknown[]> = {
+export type Command<M, A = unknown> = {
   execute: CommandFunction<M, A>;
   argsToString: (args: A) => string;
   stringToArgs: (argsString: string) => A;
 };
 
-export type Commands<M, CN extends string> = Record<CN, Command<M, unknown[]>>;
+export type Commands<
+  M,
+  CN extends string,
+> = Record<
+  CN,
+  Command<M>
+>;
 
 export type JournalEntry<
   M,
   C extends Commands<M, CN>,
-  CN extends keyof C & string,
+  CN extends CommandNames<M, C> = CommandNames<M, C>,
 > = {
   timestamp: number;
   commandName: CN;
@@ -23,6 +29,10 @@ export type JournalEntry<
 };
 
 export type Clock = () => number;
+
+export type CommandNames<M, C extends Commands<M, keyof C & string>> =
+  & keyof C
+  & string;
 
 /**
  * Things that JSON.stringify can serialize.
@@ -34,7 +44,6 @@ export type JSONValue =
   | null
   | JSONValue[]
   | { [key: string | number]: JSONValue };
-
 /**
  * Things that Deno.Kv can store as values.
  */

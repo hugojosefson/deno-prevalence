@@ -1,13 +1,13 @@
-import { Commands, JournalEntry, KvValue } from "../types.ts";
+import { CommandNames, Commands, JournalEntry } from "../types.ts";
 
 export interface Marshaller<
   M,
   C extends Commands<M, CN>,
-  CN extends keyof C & string,
-  D extends KvValue<D>,
+  D,
+  CN extends CommandNames<M, C> = CommandNames<M, C>,
 > {
   serializeModel(model: M): D;
-  serializeJournalEntry(journalEntry: JournalEntry<M, C, CN>): D;
+  serializeJournalEntry(journalEntry: JournalEntry<M, C>): D;
   deserializeModel(data: D): M;
-  deserializeJournalEntry(data: D): JournalEntry<M, C, CN>;
+  deserializeJournalEntry(data: D): JournalEntry<M, C>;
 }

@@ -1,4 +1,4 @@
-import { Commands, JournalEntry, KvValue } from "../types.ts";
+import { CommandNames, Commands, JournalEntry, KvValue } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -18,23 +18,23 @@ const JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX: Deno.KvKey = [
  * Stores data in Deno.Kv.
  * @implements {Persister}
  * @template M The type of the model.
- * @template C The type of the commands.
- * @template CN The type of the command names.
+ * @template C The type of the commands object.
  * @template D The type of the data.
+ * @template CN The type of the command names.
  */
 export class KvPersister<
   M,
   C extends Commands<M, CN>,
-  CN extends keyof C & string,
   D extends KvValue<D>,
-> implements Persister<M, C, CN> {
+  CN extends CommandNames<M, C> = CommandNames<M, C>,
+> implements Persister<M, C> {
   private readonly modelKey: Deno.KvKey;
   private readonly journalEntriesKey: Deno.KvKey;
   private readonly journalLastAppliedTimestampKey: Deno.KvKey;
   constructor(
     private readonly kv: Deno.Kv,
     private readonly prefix: Deno.KvKey,
-    private readonly marshaller: Marshaller<M, C, CN, D>,
+    private readonly marshaller: Marshaller<M, C, D>,
   ) {
     this.modelKey = [...prefix, ...MODEL_PREFIX];
     this.journalEntriesKey = [...prefix, ...JOURNAL_ENTRIES_PREFIX];
@@ -84,11 +84,11 @@ export class KvPersister<
     return this.marshaller.deserializeModel(modelResponse.value);
   }
 
-  async loadJournal(): Promise<JournalEntry<M, C, CN>[]> {
+  async loadJournal(): Promise<JournalEntry<M, C>[]> {
     const journalResponse: Deno.KvListIterator<D> = await this.kv.list({
       prefix: this.journalEntriesKey,
     });
-    const journalEntries: JournalEntry<M, C, CN>[] = [];
+    const journalEntries: JournalEntry<M, C>[] = [];
     for await (const serializedJournalEntryResponse of journalResponse) {
       const serializedJournalEntry: D = serializedJournalEntryResponse.value;
       journalEntries.push(
@@ -98,7 +98,7 @@ export class KvPersister<
     return journalEntries;
   }
 
-  async appendToJournal(journalEntry: JournalEntry<M, C, CN>): Promise<void> {
+  async appendToJournal(journalEntry: JournalEntry<M, C>): Promise<void> {
     await this.kv.atomic()
       .check({
         key: [...this.journalEntriesKey, journalEntry.timestamp],
