@@ -21,9 +21,17 @@ function calculateLabel(labelOrMetaImportUrl: string): string {
   return labelOrMetaImportUrl;
 }
 
+const labelCounts = new Map<string, number>();
+
+function countLabel(label: string): number {
+  const count = (labelCounts.get(label) ?? 0) + 1;
+  labelCounts.set(label, count);
+  return count;
+}
+
 export function logger(labelOrMetaImportUrl: string): Logger {
   const label = calculateLabel(labelOrMetaImportUrl);
-  return Object.assign(debug(label), {
+  return Object.assign(debug(`${label}/${countLabel(label)}`), {
     sub(subLabel: string): Logger {
       return logger(`${label}:${subLabel}`);
     },
