@@ -12,7 +12,7 @@ export type Command<M, A = unknown> = {
 
 export type Commands<
   M,
-  CN extends string,
+  CN extends Readonly<string>,
 > = Record<
   CN,
   Command<M>

@@ -34,79 +34,50 @@ class Model {
   ) {}
 }
 
-type AddPostCommand = Command<Model, [Post]>;
-const addPost: AddPostCommand = {
-  execute: (model: Model, args: [Post], _clock: Clock) => {
-    const [post] = args;
+abstract class ModelCommand<A> implements Command<Model, A> {
+  abstract execute(model: Model, args: A, clock: Clock): void;
+  argsToString(args: A): string {
+    return JSON.stringify(args);
+  }
+  stringToArgs(argsString: string): A {
+    return JSON.parse(argsString);
+  }
+}
+
+class AddPostCommand extends ModelCommand<Post> {
+  execute(model: Model, post: Post, _clock: Clock): void {
     model.posts[post.id] = post;
-  },
-  argsToString: (args: [Post]) => {
-    const [post] = args;
-    return JSON.stringify(post);
-  },
-  stringToArgs: (argsString: string) => {
-    const post = JSON.parse(argsString);
-    return [post];
-  },
-};
+  }
+}
 
-type RemovePostCommand = Command<Model, [string]>;
-const removePost: RemovePostCommand = {
-  execute: (model: Model, args: [string], _clock: Clock) => {
-    const [postId] = args;
+class RemovePostCommand extends ModelCommand<string> {
+  execute(model: Model, postId: string, _clock: Clock): void {
     delete model.posts[postId];
-  },
-  argsToString: (args: [string]) => {
-    const [postId] = args;
-    return postId;
-  },
-  stringToArgs: (argsString: string) => {
-    return [argsString];
-  },
-};
+  }
+}
 
-type AddUserCommand = Command<Model, [User]>;
-const addUser: AddUserCommand = {
-  execute: (model: Model, args: [User], _clock: Clock) => {
-    const [user] = args;
+class AddUserCommand extends ModelCommand<User> {
+  execute(model: Model, user: User, _clock: Clock): void {
     model.users.push(user);
-  },
-  argsToString: (args: [User]) => {
-    const [user] = args;
-    return JSON.stringify(user);
-  },
-  stringToArgs: (argsString: string) => {
-    const user = JSON.parse(argsString);
-    return [user];
-  },
-};
+  }
+}
 
-type RemoveUserCommand = Command<Model, [number]>;
-const removeUser: RemoveUserCommand = {
-  execute: (model: Model, args: [number], _clock: Clock) => {
-    const [userId] = args;
+class RemoveUserCommand extends ModelCommand<number> {
+  execute(model: Model, userId: number, _clock: Clock): void {
     model.users = model.users.filter((user) => user.uuid !== userId);
-  },
-  argsToString: (args: [number]) => {
-    const [userId] = args;
-    return userId.toString();
-  },
-  stringToArgs: (argsString: string) => {
-    return [parseInt(argsString, 10)];
-  },
-};
+  }
+}
 
-const commands: Record<string, Command<Model, unknown[]>> = {
-  addPost,
-  removePost,
-  addUser,
-  removeUser,
-};
+const commands = {
+  addPost: new AddPostCommand(),
+  removePost: new RemovePostCommand(),
+  addUser: new AddUserCommand(),
+  removeUser: new RemoveUserCommand(),
+} as const;
 
 const marshaller: Marshaller<
   Model,
   typeof commands,
-  keyof typeof commands,
   string
 > = new SuperserialMarshaller<Model, typeof commands, keyof typeof commands>(
   new Serializer({
@@ -129,11 +100,11 @@ const prevalence = await Prevalence.create<Model, typeof commands>(
   commands,
   persister,
 );
-await prevalence.execute("addPost", [{ id: "post#1", subject: "Lorem" }]);
-await prevalence.execute("addPost", [{ id: "post#2", subject: "Ipsum" }]);
-await prevalence.execute("addPost", [{ id: "post#3", subject: "Dolor" }]);
-await prevalence.execute("removePost", ["post#2"]);
-await prevalence.execute("addUser", [alice]);
+await prevalence.execute("addPost", { id: "post#1", subject: "Lorem" });
+await prevalence.execute("addPost", { id: "post#2", subject: "Ipsum" });
+await prevalence.execute("addPost", { id: "post#3", subject: "Dolor" });
+await prevalence.execute("removePost", "post#2");
+await prevalence.execute("addUser", alice);
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 
