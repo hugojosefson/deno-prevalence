@@ -1,4 +1,4 @@
-import { CommandNames, Commands, JournalEntry, KvValue } from "../types.ts";
+import { JournalEntry, KvValue } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -24,17 +24,15 @@ const JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX: Deno.KvKey = [
  */
 export class KvPersister<
   M,
-  C extends Commands<M, CN>,
   D extends KvValue<D>,
-  CN extends CommandNames<M, C> = CommandNames<M, C>,
-> implements Persister<M, C> {
+> implements Persister<M> {
   private readonly modelKey: Deno.KvKey;
   private readonly journalEntriesKey: Deno.KvKey;
   private readonly journalLastAppliedTimestampKey: Deno.KvKey;
   constructor(
     private readonly kv: Deno.Kv,
     private readonly prefix: Deno.KvKey,
-    private readonly marshaller: Marshaller<M, C, D>,
+    private readonly marshaller: Marshaller<M, D>,
   ) {
     this.modelKey = [...prefix, ...MODEL_PREFIX];
     this.journalEntriesKey = [...prefix, ...JOURNAL_ENTRIES_PREFIX];
@@ -84,11 +82,11 @@ export class KvPersister<
     return this.marshaller.deserializeModel(modelResponse.value);
   }
 
-  async loadJournal(): Promise<JournalEntry<M, C>[]> {
+  async loadJournal(): Promise<JournalEntry<M>[]> {
     const journalResponse: Deno.KvListIterator<D> = await this.kv.list({
       prefix: this.journalEntriesKey,
     });
-    const journalEntries: JournalEntry<M, C>[] = [];
+    const journalEntries: JournalEntry<M>[] = [];
     for await (const serializedJournalEntryResponse of journalResponse) {
       const serializedJournalEntry: D = serializedJournalEntryResponse.value;
       journalEntries.push(
@@ -98,7 +96,7 @@ export class KvPersister<
     return journalEntries;
   }
 
-  async appendToJournal(journalEntry: JournalEntry<M, C>): Promise<void> {
+  async appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {
     await this.kv.atomic()
       .check({
         key: [...this.journalEntriesKey, journalEntry.timestamp],

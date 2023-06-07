@@ -1,14 +1,13 @@
 #!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import {
-  Clock,
-  Command,
   KvPersister,
   Marshaller,
   Persister,
   Prevalence,
   SuperserialMarshaller,
 } from "../mod.ts";
+import { Action, SerializableClassesContainer } from "../src/types.ts";
 
 class User {
   readonly uuid: number;
@@ -34,77 +33,62 @@ class Model {
   ) {}
 }
 
-abstract class ModelCommand<A> implements Command<Model, A> {
-  abstract execute(model: Model, args: A, clock: Clock): void;
-  argsToString(args: A): string {
-    return JSON.stringify(args);
-  }
-  stringToArgs(argsString: string): A {
-    return JSON.parse(argsString);
+class AddPostAction implements Action<Model> {
+  constructor(public post: Post) {}
+  execute(model: Model): void {
+    model.posts[this.post.id] = this.post;
   }
 }
 
-class AddPostCommand extends ModelCommand<Post> {
-  execute(model: Model, post: Post, _clock: Clock): void {
-    model.posts[post.id] = post;
+class RemovePostAction implements Action<Model> {
+  constructor(public postId: string) {}
+  execute(model: Model): void {
+    delete model.posts[this.postId];
   }
 }
 
-class RemovePostCommand extends ModelCommand<string> {
-  execute(model: Model, postId: string, _clock: Clock): void {
-    delete model.posts[postId];
+class AddUserAction implements Action<Model> {
+  constructor(public user: User) {}
+  execute(model: Model): void {
+    model.users.push(this.user);
   }
 }
 
-class AddUserCommand extends ModelCommand<User> {
-  execute(model: Model, user: User, _clock: Clock): void {
-    model.users.push(user);
+class RemoveUserAction implements Action<Model> {
+  constructor(public userUuid: User["uuid"]) {}
+  execute(model: Model): void {
+    model.users = model.users.filter((u) => u.uuid !== this.userUuid);
   }
 }
 
-class RemoveUserCommand extends ModelCommand<number> {
-  execute(model: Model, userId: number, _clock: Clock): void {
-    model.users = model.users.filter((user) => user.uuid !== userId);
-  }
-}
-
-const commands = {
-  addPost: new AddPostCommand(),
-  removePost: new RemovePostCommand(),
-  addUser: new AddUserCommand(),
-  removeUser: new RemoveUserCommand(),
-} as const;
-
-const marshaller: Marshaller<
+const classes: SerializableClassesContainer = {
+  User,
   Model,
-  typeof commands,
-  string
-> = new SuperserialMarshaller<Model, typeof commands, keyof typeof commands>(
-  new Serializer({
-    classes: {
-      User,
-      Model,
-    },
-  }),
+  AddPostAction,
+  RemovePostAction,
+  AddUserAction,
+  RemoveUserAction,
+};
+
+const marshaller: Marshaller<Model, string> = new SuperserialMarshaller<Model>(
+  new Serializer({ classes }),
 );
 const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
-const persister: Persister<Model, typeof commands, keyof typeof commands> =
-  new KvPersister<Model, typeof commands, keyof typeof commands, string>(
-    kv,
-    [],
-    marshaller,
-  );
-const defaultInitialModel: Model = { posts: {}, users: [] };
-const prevalence = await Prevalence.create<Model, typeof commands>(
-  defaultInitialModel,
-  commands,
-  persister,
+const persister: Persister<Model> = new KvPersister<Model, string>(
+  kv,
+  [],
+  marshaller,
 );
-await prevalence.execute("addPost", { id: "post#1", subject: "Lorem" });
-await prevalence.execute("addPost", { id: "post#2", subject: "Ipsum" });
-await prevalence.execute("addPost", { id: "post#3", subject: "Dolor" });
-await prevalence.execute("removePost", "post#2");
-await prevalence.execute("addUser", alice);
+const defaultInitialModel: Model = { posts: {}, users: [] };
+const prevalence = await Prevalence.create<Model>(
+  defaultInitialModel,
+  { persister },
+);
+await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
+await prevalence.execute(new AddPostAction({ id: "post#2", subject: "Ipsum" }));
+await prevalence.execute(new AddPostAction({ id: "post#3", subject: "Dolor" }));
+await prevalence.execute(new RemovePostAction("post#2"));
+await prevalence.execute(new AddUserAction(alice));
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 
@@ -118,7 +102,7 @@ for (const user of prevalence.model.users) {
   console.log(`${user.uuid}: ${user.displayName}`);
 }
 
-await prevalence.execute("removeUser", [alice.uuid]);
+await prevalence.execute(new RemoveUserAction(alice.uuid));
 console.log();
 console.log("Users:");
 for (const user of prevalence.model.users) {

@@ -8,12 +8,4 @@ export type { Marshaller } from "./src/marshall/marshaller.ts";
 export { JsonMarshaller } from "./src/marshall/json-marshaller.ts";
 export { SuperserialMarshaller } from "./src/marshall/superserial-marshaller.ts";
 
-export type {
-  Clock,
-  Command,
-  CommandFunction,
-  Commands,
-  JournalEntry,
-  JSONValue,
-  KvValue,
-} from "./src/types.ts";
+export type { Clock, JournalEntry, JSONValue, KvValue } from "./src/types.ts";

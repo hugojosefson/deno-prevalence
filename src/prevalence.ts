@@ -1,5 +1,20 @@
-import { Clock, CommandNames, Commands } from "./types.ts";
+import { Action, Clock, SerializableClassesContainer } from "./types.ts";
 import { Persister } from "./persist/persister.ts";
+import { MemoryPersister } from "./persist/memory-persister.ts";
+
+export function defaultPrevalenceOptions<M>(): PrevalenceOptions<M> {
+  return {
+    persister: new MemoryPersister<M>(),
+    classes: {},
+    clock: Date.now,
+  };
+}
+
+export type PrevalenceOptions<M> = {
+  persister: Persister<M>;
+  classes: SerializableClassesContainer;
+  clock: Clock;
+};
 
 /**
  * TypeScript implementation for Deno of the Prevalence design pattern, as
@@ -17,48 +32,45 @@ import { Persister } from "./persist/persister.ts";
  * @see https://en.wikipedia.org/wiki/System_prevalence
  * @see https://prevayler.org/
  */
-export class Prevalence<
-  M,
-  C extends Commands<M, CommandNames<M, C>>,
-> {
-  private constructor(
-    readonly model: M,
-    private readonly commands: C,
-    private readonly persister: Persister<M, C, CommandNames<M, C>>,
-    private readonly clock: Clock = Date.now,
-  ) {}
+export class Prevalence<M> {
+  model: M;
+  private readonly persister: Persister<M>;
+  private readonly classes: SerializableClassesContainer;
+  private readonly clock: Clock;
 
-  static async create<
-    M,
-    C extends Commands<M, CommandNames<M, C>>,
-  >(
-    defaultInitialModel: M,
-    commands: C,
-    persister: Persister<M, C, CommandNames<M, C>>,
-    clock: Clock = Date.now,
-  ): Promise<Prevalence<M, C>> {
-    const model: M = await persister.loadModel(defaultInitialModel);
-    return new Prevalence<M, C>(model, commands, persister, clock);
+  private constructor(
+    model: M,
+    options: PrevalenceOptions<M>,
+  ) {
+    this.model = model;
+    this.persister = options.persister;
+    this.classes = options.classes;
+    this.clock = options.clock;
   }
 
-  async execute<
-    A extends Parameters<C[CN]["execute"]>[1],
-    CN extends CommandNames<M, C> = CommandNames<M, C>,
-  >(
-    commandName: CN,
-    args: A,
-  ): Promise<void> {
-    const command: C[CN] = this.commands[commandName];
-    const argsString: string = command.argsToString(args);
+  static async create<M>(
+    defaultInitialModel: M,
+    options: Partial<PrevalenceOptions<M>>,
+  ): Promise<Prevalence<M>> {
+    const effectiveOptions: PrevalenceOptions<M> = {
+      ...defaultPrevalenceOptions(),
+      ...options,
+    };
+
+    const model: M = await effectiveOptions.persister.loadModel(
+      defaultInitialModel,
+    );
+    return new Prevalence<M>(model, effectiveOptions);
+  }
+
+  async execute<A extends Action<M>>(action: A): Promise<void> {
     const timestamp: number = this.clock();
     await this.persister.appendToJournal({
-      commandName,
-      argsString,
       timestamp,
+      action,
     });
-    command.execute(
+    action.execute(
       this.model,
-      command.stringToArgs(argsString),
       () => timestamp,
     );
   }

@@ -1,12 +1,10 @@
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
-import { CommandNames, Commands, JournalEntry } from "../types.ts";
+import { JournalEntry } from "../types.ts";
 import { Marshaller } from "./marshaller.ts";
 
 export class SuperserialMarshaller<
   M,
-  C extends Commands<M, CN>,
-  CN extends CommandNames<M, C> = CommandNames<M, C>,
-> implements Marshaller<M, C, string> {
+> implements Marshaller<M, string> {
   private readonly serializer: Serializer;
 
   constructor(serializer: Serializer) {
@@ -17,7 +15,7 @@ export class SuperserialMarshaller<
     return this.serializer.serialize(model);
   }
 
-  serializeJournalEntry(journalEntry: JournalEntry<M, C>): string {
+  serializeJournalEntry(journalEntry: JournalEntry<M>): string {
     return this.serializer.serialize(journalEntry);
   }
 
@@ -25,7 +23,7 @@ export class SuperserialMarshaller<
     return this.serializer.deserialize(data);
   }
 
-  deserializeJournalEntry(data: string): JournalEntry<M, C> {
+  deserializeJournalEntry(data: string): JournalEntry<M> {
     return this.serializer.deserialize(data);
   }
 }

@@ -1,20 +1,14 @@
-import { CommandNames, Commands, JournalEntry } from "../types.ts";
+import { JournalEntry } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 
 /**
  * Stores data in memory.
  * @implements {Persister}
  * @template M The type of the model.
- * @template C The type of the commands object.
- * @template CN The type of the command names.
  */
-export class MemoryPersister<
-  M,
-  C extends Commands<M, CN>,
-  CN extends CommandNames<M, C> = CommandNames<M, C>,
-> implements Persister<M, C> {
+export class MemoryPersister<M> implements Persister<M> {
   private model: M | undefined = undefined;
-  private journal: JournalEntry<M, C>[] = [];
+  private journal: JournalEntry<M>[] = [];
 
   loadModel(defaultInitialModel: M): Promise<M> {
     if (this.model === undefined) {
@@ -23,11 +17,11 @@ export class MemoryPersister<
     return Promise.resolve(this.model);
   }
 
-  loadJournal(): Promise<JournalEntry<M, C>[]> {
+  loadJournal(): Promise<JournalEntry<M>[]> {
     return Promise.resolve(this.journal);
   }
 
-  appendToJournal(journalEntry: JournalEntry<M, C>): Promise<void> {
+  appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {
     this.journal.push(journalEntry);
     return Promise.resolve();
   }

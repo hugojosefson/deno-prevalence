@@ -1,14 +1,10 @@
-import { CommandNames, Commands, JournalEntry } from "../types.ts";
+import { JournalEntry } from "../types.ts";
 
 export type DELETE_ALL = "deleteAll";
 export const DELETE_ALL: DELETE_ALL = "deleteAll" as DELETE_ALL;
 export type LastAppliedTimestamp = number | DELETE_ALL;
 
-export interface Persister<
-  M,
-  C extends Commands<M, CN>,
-  CN extends CommandNames<M, C> = CommandNames<M, C>,
-> {
+export interface Persister<M> {
   /**
    * Load the model from the persister.
    */
@@ -17,14 +13,14 @@ export interface Persister<
   /**
    * Load the journal from the persister.
    */
-  loadJournal(): Promise<JournalEntry<M, C>[]>;
+  loadJournal(): Promise<JournalEntry<M>[]>;
 
   /**
    * Append an entry to the journal.
    * @param journalEntry The entry to append.
    * @returns A promise that resolves when the entry has been appended.
    */
-  appendToJournal(journalEntry: JournalEntry<M, C>): Promise<void>;
+  appendToJournal(journalEntry: JournalEntry<M>): Promise<void>;
 
   /**
    * Save the model to the persister, and clear the journal, atomically.

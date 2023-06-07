@@ -18,12 +18,18 @@ Please see the
 ## Example usage
 
 ```typescript
-import { Clock, Command } from "https://deno.land/x/kv_prevalence/src/types.ts";
-import { Marshaller } from "https://deno.land/x/kv_prevalence/src/marshall/marshaller.ts";
-import { JsonMarshaller } from "https://deno.land/x/kv_prevalence/src/marshall/json-marshaller.ts";
-import { Persister } from "https://deno.land/x/kv_prevalence/src/persist/persister.ts";
-import { KvPersister } from "https://deno.land/x/kv_prevalence/src/persist/kv-persister.ts";
-import { Prevalence } from "https://deno.land/x/kv_prevalence/mod.ts";
+import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
+import {
+  KvPersister,
+  Marshaller,
+  Persister,
+  Prevalence,
+  SuperserialMarshaller,
+} from "https://deno.land/x/kv_prevalence/mod.ts";
+import {
+  Action,
+  SerializableClassesContainer,
+} from "https://deno.land/x/kv_prevalence/src/types.ts";
 
 class User {
   readonly uuid: number;
@@ -35,7 +41,7 @@ class User {
     this.displayName = displayName;
   }
 }
-const alice = new User(1, "Alice");
+const alice: User = new User(1, "Alice");
 
 type Post = {
   id: string;
@@ -43,71 +49,88 @@ type Post = {
 };
 
 class Model {
-  constructor(readonly posts: Record<string, Post>) {}
+  constructor(
+    public posts: Record<string, Post>,
+    public users: User[],
+  ) {}
 }
 
-type AddPostCommand = Command<Model, [Post]>;
-const addPost: AddPostCommand = {
-  execute: (model: Model, args: [Post], _clock: Clock) => {
-    const [post] = args;
-    model.posts[post.id] = post;
-  },
-  argsToString: (args: [Post]) => {
-    const [post] = args;
-    return JSON.stringify(post);
-  },
-  stringToArgs: (argsString: string) => {
-    const post = JSON.parse(argsString);
-    return [post];
-  },
-};
-type RemovePostCommand = Command<Model, [string]>;
-const removePost: RemovePostCommand = {
-  execute: (model: Model, args: [string], _clock: Clock) => {
-    const [postId] = args;
-    delete model.posts[postId];
-  },
-  argsToString: (args: [string]) => {
-    const [postId] = args;
-    return postId;
-  },
-  stringToArgs: (argsString: string) => {
-    return [argsString];
-  },
-};
-type PostCommand = AddPostCommand | RemovePostCommand;
-const commands: Record<"addPost" | "removePost", PostCommand> = {
-  addPost,
-  removePost,
+class AddPostAction implements Action<Model> {
+  constructor(public post: Post) {}
+  execute(model: Model): void {
+    model.posts[this.post.id] = this.post;
+  }
+}
+
+class RemovePostAction implements Action<Model> {
+  constructor(public postId: string) {}
+  execute(model: Model): void {
+    delete model.posts[this.postId];
+  }
+}
+
+class AddUserAction implements Action<Model> {
+  constructor(public user: User) {}
+  execute(model: Model): void {
+    model.users.push(this.user);
+  }
+}
+
+class RemoveUserAction implements Action<Model> {
+  constructor(public userUuid: User["uuid"]) {}
+  execute(model: Model): void {
+    model.users = model.users.filter((u) => u.uuid !== this.userUuid);
+  }
+}
+
+const classes: SerializableClassesContainer = {
+  User,
+  Model,
+  AddPostAction,
+  RemovePostAction,
+  AddUserAction,
+  RemoveUserAction,
 };
 
-const marshaller: Marshaller<
-  Model,
-  Record<"addPost" | "removePost", PostCommand>,
-  keyof typeof commands,
-  string
-> = new JsonMarshaller<Model, typeof commands, keyof typeof commands, string>();
+const marshaller: Marshaller<Model, string> = new SuperserialMarshaller<Model>(
+  new Serializer({ classes }),
+);
 const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
-const persister: Persister<Model> = new KvPersister<Model, Uint8Array>(
+const persister: Persister<Model> = new KvPersister<Model, string>(
   kv,
   [],
   marshaller,
 );
-const defaultInitialModel: Model = { posts: {} };
-const prevalence = await Prevalence.create<Model, PostTransaction>(
-  persister,
+const defaultInitialModel: Model = { posts: {}, users: [] };
+const prevalence = await Prevalence.create<Model>(
   defaultInitialModel,
+  { persister },
 );
-await prevalence.execute(new AddPost({ id: "post#1", subject: "Lorem" }));
-await prevalence.execute(new AddPost({ id: "post#2", subject: "Ipsum" }));
-await prevalence.execute(new AddPost({ id: "post#3", subject: "Dolor" }));
-await prevalence.execute(new RemovePost("post#2"));
+await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
+await prevalence.execute(new AddPostAction({ id: "post#2", subject: "Ipsum" }));
+await prevalence.execute(new AddPostAction({ id: "post#3", subject: "Dolor" }));
+await prevalence.execute(new RemovePostAction("post#2"));
+await prevalence.execute(new AddUserAction(alice));
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 
+console.log("Posts:");
 for (const post of posts) {
   console.log(`${post.id}: ${post.subject}`);
 }
+console.log();
+console.log("Users:");
+for (const user of prevalence.model.users) {
+  console.log(`${user.uuid}: ${user.displayName}`);
+}
+
+await prevalence.execute(new RemoveUserAction(alice.uuid));
+console.log();
+console.log("Users:");
+for (const user of prevalence.model.users) {
+  console.log(`${user.uuid}: ${user.displayName}`);
+}
+console.log("Done.");
 ```
 
 You may run the above example with:

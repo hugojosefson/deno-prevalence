@@ -1,38 +1,20 @@
-export type CommandFunction<M, A> = (
-  model: M,
-  args: A,
-  clock: Clock,
-) => void;
+export type { ConstructType } from "https://deno.land/x/superserial@0.3.4/mod.ts";
+import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 
-export type Command<M, A = unknown> = {
-  execute: CommandFunction<M, A>;
-  argsToString: (args: A) => string;
-  stringToArgs: (argsString: string) => A;
-};
-
-export type Commands<
-  M,
-  CN extends Readonly<string>,
-> = Record<
-  CN,
-  Command<M>
+export type SerializableClassesContainer = NonNullable<
+  SerializerOptions["classes"]
 >;
 
-export type JournalEntry<
-  M,
-  C extends Commands<M, CN>,
-  CN extends CommandNames<M, C> = CommandNames<M, C>,
-> = {
+export interface Action<M> {
+  execute(model: M, clock: Clock): void;
+}
+
+export type JournalEntry<M> = {
   timestamp: number;
-  commandName: CN;
-  argsString: string;
+  action: Action<M>;
 };
 
 export type Clock = () => number;
-
-export type CommandNames<M, C extends Commands<M, keyof C & string>> =
-  & keyof C
-  & string;
 
 /**
  * Things that JSON.stringify can serialize.
