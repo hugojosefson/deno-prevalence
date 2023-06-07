@@ -1,10 +1,19 @@
 # prevalence
 
 [System prevalence](https://en.wikipedia.org/wiki/System_prevalence) as a typed
-library, using a [Deno.Kv](https://deno.com/kv) database for storage.
+library, using [Deno.Kv](https://deno.com/kv) for storage.
 
 [![deno module](https://shield.deno.dev/x/prevalence)](https://deno.land/x/prevalence)
 [![CI](https://github.com/hugojosefson/deno-prevalence/actions/workflows/ci.yaml/badge.svg)](https://github.com/hugojosefson/deno-prevalence/actions/workflows/ci.yaml)
+
+TypeScript implementation for Deno of the Prevalence design pattern, as
+introduced by Klaus Wuestefeld in 1998 with [Prevayler](https://prevayler.org/).
+
+Saves periodical snapshots of the whole model for faster startup, and keeps a
+journal of executed actions since last snapshot, using a
+[Persister](./src/persist/persister.ts). The `Persister` uses a
+[Marshaller](./src/marshall/marshaller.ts) to serialize/deserialize the model
+and the journal.
 
 ## Requirements
 
