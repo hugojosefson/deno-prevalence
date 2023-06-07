@@ -64,14 +64,14 @@ export class Prevalence<M extends Model<M>> {
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
   ): Promise<Prevalence<M>> {
-    const log1 = log0.sub("create");
-    log1("defaultInitialModel =", defaultInitialModel);
-    log1("options =", options);
+    const log = log0.sub("create");
+    log("defaultInitialModel =", defaultInitialModel);
+    log("options =", options);
     const effectiveOptions: PrevalenceOptions<M> = {
       ...defaultPrevalenceOptions(options.classes),
       ...options,
     };
-    log1("effectiveOptions =", effectiveOptions);
+    log("effectiveOptions =", effectiveOptions);
 
     const model: M = await effectiveOptions.persister.loadModel(
       defaultInitialModel,
@@ -109,21 +109,31 @@ export class Prevalence<M extends Model<M>> {
 
   async execute<A extends Action<M>>(action: A): Promise<void> {
     const timestamp: number = this.clock();
-    await this.persister.appendToJournal({
+    const log = log0.sub("execute");
+    log("timestamp =", timestamp);
+    log("action =", action);
+
+    const storedAction: Action<M> = await this.persister.appendToJournal({
       timestamp,
       action,
     });
-    action.execute(
+    log("storedAction =", storedAction);
+
+    storedAction.execute(
       this.model,
       () => timestamp,
     );
+    log("storedAction executed on model");
   }
 
   async snapshot(): Promise<void> {
     const timestamp: number = this.clock();
+    const log = log0.sub("snapshot");
+    log("timestamp =", timestamp);
     await this.persister.saveModelAndClearJournal(
       this.model,
       timestamp,
     );
+    log("model saved");
   }
 }

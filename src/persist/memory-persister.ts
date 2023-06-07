@@ -1,4 +1,4 @@
-import { JournalEntry, KvValue, Model } from "../types.ts";
+import { Action, JournalEntry, KvValue, Model } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -39,9 +39,10 @@ export class MemoryPersister<
     return Promise.resolve(this.serdeserJournal(this.ram.journal));
   }
 
-  appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {
-    this.ram.journal.push(this.serdeserJournalEntry(journalEntry));
-    return Promise.resolve();
+  appendToJournal(journalEntry: JournalEntry<M>): Promise<Action<M>> {
+    const entry: JournalEntry<M> = this.serdeserJournalEntry(journalEntry);
+    this.ram.journal.push(entry);
+    return Promise.resolve(entry.action);
   }
 
   saveModelAndClearJournal(

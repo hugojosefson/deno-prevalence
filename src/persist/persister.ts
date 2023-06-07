@@ -1,4 +1,4 @@
-import { JournalEntry, Model } from "../types.ts";
+import { Action, JournalEntry, Model } from "../types.ts";
 
 export type DELETE_ALL = "deleteAll";
 export const DELETE_ALL: DELETE_ALL = "deleteAll" as DELETE_ALL;
@@ -22,7 +22,7 @@ export interface Persister<M extends Model<M>> {
    * @param journalEntry The entry to append.
    * @returns A promise that resolves when the entry has been appended.
    */
-  appendToJournal(journalEntry: JournalEntry<M>): Promise<void>;
+  appendToJournal(journalEntry: JournalEntry<M>): Promise<Action<M>>;
 
   /**
    * Save the model to the persister, and clear the journal, atomically.

@@ -1,4 +1,4 @@
-import { JournalEntry, KvValue, Model, Returns } from "../types.ts";
+import { Action, JournalEntry, KvValue, Model, Returns } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -100,7 +100,10 @@ export class KvPersister<
     }
   }
 
-  async appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {
+  async appendToJournal(journalEntry: JournalEntry<M>): Promise<Action<M>> {
+    const serializedEntry: D = this.marshaller.serializeJournalEntry(
+      journalEntry,
+    );
     await (await this.kv).atomic()
       .check({
         key: [...this.journalEntriesKey, journalEntry.timestamp],
@@ -108,9 +111,10 @@ export class KvPersister<
       })
       .set(
         [...this.journalEntriesKey, journalEntry.timestamp],
-        this.marshaller.serializeJournalEntry(journalEntry),
+        serializedEntry,
       )
       .commit();
+    return this.marshaller.deserializeJournalEntry(serializedEntry).action;
   }
 
   async loadLastAppliedTimestamp(): Promise<number | null> {
