@@ -109,4 +109,6 @@ for (const user of Object.values(prevalence.model.users)) {
   log(`${user.uuid}: ${user.displayName}`);
 }
 
+await prevalence.snapshot();
+
 log("Done.");

@@ -76,32 +76,57 @@ export class Prevalence<M extends Model<M>> {
     const model: M = await effectiveOptions.persister.loadModel(
       defaultInitialModel,
     );
+    log("loaded model =", model);
+
     // sort journal by timestamp, from oldest to newest, in case it was not already done by the persister
     const journal: JournalEntry<M>[] =
       (await effectiveOptions.persister.loadJournal()).sort((je1, je2) =>
         je1.timestamp - je2.timestamp
       );
+    log("loaded journal =", journal);
 
-    let lastAppliedTimestamp =
+    const previouslyAppliedTimestamp =
       await effectiveOptions.persister.loadLastAppliedTimestamp() ?? 0;
+    log("previouslyAppliedTimestamp =", previouslyAppliedTimestamp);
 
     // apply all actions in the journal that were not already applied
-    journal
-      .filter((entry) => entry.timestamp > lastAppliedTimestamp)
-      .forEach((entry) => {
-        entry.action.execute(
-          model,
-          () => entry.timestamp,
+    let lastAppliedTimestamp = previouslyAppliedTimestamp;
+    const filteredJournal = journal.filter((journalEntry) =>
+      journalEntry.timestamp > lastAppliedTimestamp
+    );
+    log("filteredJournal =", filteredJournal);
+    if (filteredJournal.length === 0) {
+      log("no journal to apply");
+    } else {
+      filteredJournal.forEach((journalEntry) => {
+        log(
+          "applying journalEntry to model",
+          journalEntry.timestamp,
+          journalEntry.action,
         );
-        lastAppliedTimestamp = entry.timestamp;
+        journalEntry.action.execute(
+          model,
+          () => journalEntry.timestamp,
+        );
+        lastAppliedTimestamp = journalEntry.timestamp;
       });
+      log("applied journal to model");
+      log("lastAppliedTimestamp =", lastAppliedTimestamp);
+    }
 
     // save updated model, if any action was applied
-    if (lastAppliedTimestamp > 0) {
+    if (lastAppliedTimestamp > previouslyAppliedTimestamp) {
+      log(
+        "saving model, clearing journal, and updating lastAppliedTimestamp",
+        lastAppliedTimestamp,
+      );
       await effectiveOptions.persister.saveModelAndClearJournal(
         model,
         lastAppliedTimestamp,
       );
+      log("model saved");
+    } else {
+      log("no action applied, no need to save model");
     }
 
     return new Prevalence<M>(model, effectiveOptions);
