@@ -20,17 +20,17 @@ Please see the
 ```typescript
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import {
+  Action,
   KvPersister,
   Marshaller,
+  Model,
   Persister,
   Prevalence,
+  SerializableClassesContainer,
   SuperserialMarshaller,
 } from "https://deno.land/x/kv_prevalence/mod.ts";
-import {
-  Action,
-  Model,
-  SerializableClassesContainer,
-} from "https://deno.land/x/kv_prevalence/src/types.ts";
+import { logger } from "https://deno.land/x/kv_prevalence/src/log.ts";
+const log = logger(import.meta.url);
 
 class User {
   constructor(
@@ -113,24 +113,22 @@ await prevalence.execute(new AddUserAction(alice));
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 
-console.log("Posts:");
+log("Posts:");
 for (const post of posts) {
-  console.log(`${post.id}: ${post.subject}`);
+  log(`${post.id}: ${post.subject}`);
 }
-console.log();
-console.log("Users:");
+log("Users:");
 for (const user of Object.values(prevalence.model.users)) {
-  console.log(`${user.uuid}: ${user.displayName}`);
+  log(`${user.uuid}: ${user.displayName}`);
 }
 
 await prevalence.execute(new RemoveUserAction(alice.uuid));
-console.log();
-console.log("Users:");
+log("Users:");
 for (const user of Object.values(prevalence.model.users)) {
-  console.log(`${user.uuid}: ${user.displayName}`);
+  log(`${user.uuid}: ${user.displayName}`);
 }
 
-console.log("Done.");
+log("Done.");
 ```
 
 You may run the above example with:

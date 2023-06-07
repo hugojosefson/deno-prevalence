@@ -1,13 +1,17 @@
-#!/usr/bin/env -S deno run --unstable --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
+#!/usr/bin/env -S deno run --unstable --allow-env=DEBUG --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import {
+  Action,
   KvPersister,
   Marshaller,
+  Model,
   Persister,
   Prevalence,
+  SerializableClassesContainer,
   SuperserialMarshaller,
 } from "../mod.ts";
-import { Action, Model, SerializableClassesContainer } from "../src/types.ts";
+import { logger } from "../src/log.ts";
+const log = logger(import.meta.url);
 
 class User {
   constructor(
@@ -90,21 +94,19 @@ await prevalence.execute(new AddUserAction(alice));
 
 const posts: Post[] = Object.values(prevalence.model.posts);
 
-console.log("Posts:");
+log("Posts:");
 for (const post of posts) {
-  console.log(`${post.id}: ${post.subject}`);
+  log(`${post.id}: ${post.subject}`);
 }
-console.log();
-console.log("Users:");
+log("Users:");
 for (const user of Object.values(prevalence.model.users)) {
-  console.log(`${user.uuid}: ${user.displayName}`);
+  log(`${user.uuid}: ${user.displayName}`);
 }
 
 await prevalence.execute(new RemoveUserAction(alice.uuid));
-console.log();
-console.log("Users:");
+log("Users:");
 for (const user of Object.values(prevalence.model.users)) {
-  console.log(`${user.uuid}: ${user.displayName}`);
+  log(`${user.uuid}: ${user.displayName}`);
 }
 
-console.log("Done.");
+log("Done.");

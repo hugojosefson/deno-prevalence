@@ -1,8 +1,17 @@
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
-import { Action, Clock, Model, SerializableClassesContainer } from "./types.ts";
+import {
+  Action,
+  Clock,
+  JournalEntry,
+  Model,
+  SerializableClassesContainer,
+} from "./types.ts";
 import { Persister } from "./persist/persister.ts";
 import { MemoryPersister } from "./persist/memory-persister.ts";
 import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
+import { logger } from "./log.ts";
+
+const log0 = logger(import.meta.url);
 
 export function defaultPrevalenceOptions<M extends Model<M>>(
   classes?: SerializableClassesContainer,
@@ -55,14 +64,44 @@ export class Prevalence<M extends Model<M>> {
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
   ): Promise<Prevalence<M>> {
+    const log1 = log0.sub("create");
+    log1("defaultInitialModel =", defaultInitialModel);
+    log1("options =", options);
     const effectiveOptions: PrevalenceOptions<M> = {
       ...defaultPrevalenceOptions(options.classes),
       ...options,
     };
+    log1("effectiveOptions =", effectiveOptions);
 
     const model: M = await effectiveOptions.persister.loadModel(
       defaultInitialModel,
     );
+    // sort journal by timestamp, from oldest to newest, in case it was not already done by the persister
+    const journal: JournalEntry<M>[] =
+      (await effectiveOptions.persister.loadJournal()).sort((je1, je2) =>
+        je1.timestamp - je2.timestamp
+      );
+
+    let lastAppliedTimestamp =
+      await effectiveOptions.persister.loadLastAppliedTimestamp() ?? 0;
+
+    // apply all actions in the journal that were not already applied
+    journal
+      .filter((entry) => entry.timestamp > lastAppliedTimestamp)
+      .forEach((entry) => {
+        entry.action.execute(
+          model,
+          () => entry.timestamp,
+        );
+        lastAppliedTimestamp = entry.timestamp;
+      });
+
+    if (lastAppliedTimestamp > 0) {
+      await effectiveOptions.persister.saveModelAndClearJournal(
+        model,
+        lastAppliedTimestamp,
+      );
+    }
     return new Prevalence<M>(model, effectiveOptions);
   }
 

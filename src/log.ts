@@ -1,0 +1,31 @@
+import { basename, extname } from "https://deno.land/std@0.190.0/path/mod.ts";
+import type { Debug } from "https://deno.land/x/quiet_debug@v1.0.0/mod.ts";
+import { debug } from "https://deno.land/x/quiet_debug@v1.0.0/mod.ts";
+
+export interface Logger extends Debug {
+  sub(label: string): Logger;
+}
+
+type FileUrl = `file://${string}`;
+
+function isFileUrl(url: string): url is FileUrl {
+  return url.startsWith("file://");
+}
+
+function calculateLabel(labelOrMetaImportUrl: string): string {
+  if (isFileUrl(labelOrMetaImportUrl)) {
+    const url = labelOrMetaImportUrl;
+    const ext = extname(url);
+    return basename(url, ext);
+  }
+  return labelOrMetaImportUrl;
+}
+
+export function logger(labelOrMetaImportUrl: string): Logger {
+  const label = calculateLabel(labelOrMetaImportUrl);
+  return Object.assign(debug(label), {
+    sub(subLabel: string): Logger {
+      return logger(`${label}:${subLabel}`);
+    },
+  });
+}
