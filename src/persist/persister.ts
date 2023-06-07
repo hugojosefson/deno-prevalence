@@ -4,7 +4,11 @@ export type DELETE_ALL = "deleteAll";
 export const DELETE_ALL: DELETE_ALL = "deleteAll" as DELETE_ALL;
 export type LastAppliedTimestamp = number | DELETE_ALL;
 
-export interface Persister<M, C extends Commands<M>, CN extends keyof C> {
+export interface Persister<
+  M,
+  C extends Commands<M, CN>,
+  CN extends keyof C & string,
+> {
   /**
    * Load the model from the persister.
    */

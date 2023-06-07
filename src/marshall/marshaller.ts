@@ -2,8 +2,8 @@ import { Commands, JournalEntry, KvValue } from "../types.ts";
 
 export interface Marshaller<
   M,
-  C extends Commands<M>,
-  CN extends keyof C,
+  C extends Commands<M, CN>,
+  CN extends keyof C & string,
   D extends KvValue<D>,
 > {
   serializeModel(model: M): D;

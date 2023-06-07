@@ -19,7 +19,7 @@ import { Persister } from "./persist/persister.ts";
  */
 export class Prevalence<
   M,
-  C extends Commands<M>,
+  C extends Commands<M, keyof C>,
 > {
   private constructor(
     readonly model: M,
@@ -30,7 +30,7 @@ export class Prevalence<
 
   static async create<
     M,
-    C extends Commands<M>,
+    C extends Commands<M, CN>,
   >(
     defaultInitialModel: M,
     commands: C,
@@ -42,7 +42,7 @@ export class Prevalence<
   }
 
   async execute<
-    CN extends keyof C,
+    CN extends keyof C & string,
     A extends Parameters<C[CN]["execute"]>[1],
   >(
     commandName: CN,

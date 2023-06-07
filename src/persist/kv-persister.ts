@@ -24,8 +24,8 @@ const JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX: Deno.KvKey = [
  */
 export class KvPersister<
   M,
-  C extends Commands<M>,
-  CN extends keyof C,
+  C extends Commands<M, CN>,
+  CN extends keyof C & string,
   D extends KvValue<D>,
 > implements Persister<M, C, CN> {
   private readonly modelKey: Deno.KvKey;

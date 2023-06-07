@@ -10,14 +10,12 @@ export type Command<M, A extends unknown[]> = {
   stringToArgs: (argsString: string) => A;
 };
 
-export type Commands<M> = {
-  [commandName: string]: Command<M, unknown[]>;
-};
+export type Commands<M, CN extends string> = Record<CN, Command<M, unknown[]>>;
 
 export type JournalEntry<
   M,
-  C extends Commands<M>,
-  CN extends keyof C,
+  C extends Commands<M, CN>,
+  CN extends keyof C & string,
 > = {
   timestamp: number;
   commandName: CN;

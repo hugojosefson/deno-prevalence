@@ -8,8 +8,8 @@ import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
  */
 export class MemoryPersister<
   M,
-  C extends Commands<M>,
-  CN extends keyof C,
+  C extends Commands<M, CN>,
+  CN extends keyof C & string,
 > implements Persister<M, C, CN> {
   private model: M | undefined = undefined;
   private journal: JournalEntry<M, C, CN>[] = [];
