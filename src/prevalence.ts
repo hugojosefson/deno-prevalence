@@ -26,10 +26,7 @@ export type PrevalenceOptions<M extends Model<M>> = {
  * TypeScript implementation for Deno of the Prevalence design pattern, as
  * introduced by Klaus Wüstefeld in 1998 with Prevayler.
  *
- * Expects Commands to serialize/deserialize arguments into/from a string, and to mutate the
- * model.
- *
- * Saves periodical snapshots of the model, and journal of executed commands
+ * Saves periodical snapshots of the model, and journal of executed actions
  * since last snapshot, using a Persister.
  *
  * The Persister uses a Marshaller to serialize/deserialize the model and the

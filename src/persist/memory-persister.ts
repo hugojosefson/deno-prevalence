@@ -11,6 +11,7 @@ interface Ram<M extends Model<M>> {
  * Stores data in memory.
  * @implements {Persister}
  * @template M The type of the model.
+ * @template D The type of the stored data.
  */
 export class MemoryPersister<
   M extends Model<M>,

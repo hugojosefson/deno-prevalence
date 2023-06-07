@@ -7,6 +7,8 @@ export type LastAppliedTimestamp = number | DELETE_ALL;
 export interface Persister<M extends Model<M>> {
   /**
    * Load the model from the persister.
+   *
+   * @param defaultInitialModel The initial model to use if there is no model in the persister.
    */
   loadModel(defaultInitialModel: M): Promise<M>;
 
