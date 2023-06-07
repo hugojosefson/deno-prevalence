@@ -96,12 +96,14 @@ export class Prevalence<M extends Model<M>> {
         lastAppliedTimestamp = entry.timestamp;
       });
 
+    // save updated model, if any action was applied
     if (lastAppliedTimestamp > 0) {
       await effectiveOptions.persister.saveModelAndClearJournal(
         model,
         lastAppliedTimestamp,
       );
     }
+
     return new Prevalence<M>(model, effectiveOptions);
   }
 
@@ -114,6 +116,14 @@ export class Prevalence<M extends Model<M>> {
     action.execute(
       this.model,
       () => timestamp,
+    );
+  }
+
+  async snapshot(): Promise<void> {
+    const timestamp: number = this.clock();
+    await this.persister.saveModelAndClearJournal(
+      this.model,
+      timestamp,
     );
   }
 }
