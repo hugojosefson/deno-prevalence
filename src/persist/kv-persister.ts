@@ -34,7 +34,7 @@ export class KvPersister<
   constructor(
     private readonly marshaller: Marshaller<M, D>,
     kv: Deno.Kv | (() => Promise<Deno.Kv>) = Deno.openKv.bind(Deno),
-    private readonly prefix: Deno.KvKey = [],
+    private readonly prefix: Deno.KvKey = ["prevalence"],
   ) {
     this.kv = typeof kv === "function" ? kv() : Promise.resolve(kv);
     this.modelKey = [...prefix, ...MODEL_PREFIX];
