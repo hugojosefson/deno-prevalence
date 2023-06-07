@@ -18,7 +18,6 @@ Please see the
 ## Example usage
 
 ```typescript
-import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import {
   Action,
   KvPersister,
@@ -30,6 +29,8 @@ import {
   SerializableClassesContainer,
   SuperserialMarshaller,
 } from "https://deno.land/x/prevalence/mod.ts";
+import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
+
 const log = logger(import.meta.url);
 
 class User {

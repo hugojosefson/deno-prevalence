@@ -1,5 +1,4 @@
 #!/usr/bin/env -S deno run --unstable --allow-env=DEBUG --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
-import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import {
   Action,
   KvPersister,
@@ -11,6 +10,8 @@ import {
   SerializableClassesContainer,
   SuperserialMarshaller,
 } from "../mod.ts";
+import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
+
 const log = logger(import.meta.url);
 
 class User {
