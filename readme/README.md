@@ -3,7 +3,7 @@
 [System prevalence](https://en.wikipedia.org/wiki/System_prevalence) as a typed
 library, using [Deno.Kv](https://deno.com/kv) for storage.
 
-[![deno module](https://shield.deno.dev/x/prevalence)](https://deno.land/x/prevalence)
+[![deno.land/x/prevalence](https://shield.deno.dev/x/prevalence)](https://deno.land/x/prevalence)
 [![CI](https://github.com/hugojosefson/deno-prevalence/actions/workflows/ci.yaml/badge.svg)](https://github.com/hugojosefson/deno-prevalence/actions/workflows/ci.yaml)
 
 TypeScript implementation for Deno of the Prevalence design pattern, as
