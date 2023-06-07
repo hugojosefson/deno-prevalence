@@ -3,6 +3,7 @@ import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts"
 import {
   Action,
   KvPersister,
+  logger,
   Marshaller,
   Model,
   Persister,
@@ -10,7 +11,6 @@ import {
   SerializableClassesContainer,
   SuperserialMarshaller,
 } from "../mod.ts";
-import { logger } from "../src/log.ts";
 const log = logger(import.meta.url);
 
 class User {

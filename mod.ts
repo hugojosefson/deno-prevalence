@@ -17,3 +17,5 @@ export type {
   Model,
   SerializableClassesContainer,
 } from "./src/types.ts";
+
+export { type Logger, logger } from "./src/log.ts";
