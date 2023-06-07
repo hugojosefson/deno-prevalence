@@ -11,9 +11,9 @@ introduced by Klaus Wuestefeld in 1998 with [Prevayler](https://prevayler.org/).
 
 Saves periodical snapshots of the whole model for faster startup, and keeps a
 journal of executed actions since last snapshot, using a
-[Persister](./src/persist/persister.ts). The `Persister` uses a
-[Marshaller](./src/marshall/marshaller.ts) to serialize/deserialize the model
-and the journal.
+[Persister](https://deno.land/x/prevalence/mod.ts?s=Persister). The `Persister`
+uses a [Marshaller](https://deno.land/x/prevalence/mod.ts?s=Marshaller) to
+serialize/deserialize the model and the journal.
 
 ## Requirements
 
