@@ -1,4 +1,4 @@
-import { JournalEntry, KvValue, Model } from "../types.ts";
+import { JournalEntry, KvValue, Model, Returns } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -33,7 +33,7 @@ export class KvPersister<
 
   constructor(
     private readonly marshaller: Marshaller<M, D>,
-    kv: Deno.Kv | (() => Promise<Deno.Kv>) = Deno.openKv.bind(Deno),
+    kv: Deno.Kv | Returns<Promise<Deno.Kv>> = Deno.openKv.bind(Deno),
     private readonly prefix: Deno.KvKey = ["prevalence"],
   ) {
     this.kv = typeof kv === "function" ? kv() : Promise.resolve(kv);

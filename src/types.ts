@@ -47,3 +47,5 @@ export type KvValue<T extends KvValue<T>> =
   | Set<T>
   | Date
   | RegExp;
+
+export type Returns<T> = () => T;

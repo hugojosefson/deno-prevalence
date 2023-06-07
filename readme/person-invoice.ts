@@ -81,7 +81,7 @@ const prevalence: Prevalence<MyModel> = await Prevalence.create<MyModel>(
   defaultInitialModel,
   { persister, classes },
 );
-console.dir(prevalence.model);
+
 await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
 await prevalence.execute(new AddPostAction({ id: "post#2", subject: "Ipsum" }));
 await prevalence.execute(new AddPostAction({ id: "post#3", subject: "Dolor" }));
