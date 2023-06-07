@@ -1,8 +1,8 @@
-import { JournalEntry, JSONValue } from "../types.ts";
+import { JournalEntry, JSONValue, Model } from "../types.ts";
 import { Marshaller } from "./marshaller.ts";
 
 export class JsonMarshaller<
-  M extends JSONValue,
+  M extends Model<M> & JSONValue,
 > implements Marshaller<M, string> {
   serializeModel(model: M): string {
     return JSON.stringify(model);

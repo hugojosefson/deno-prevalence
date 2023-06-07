@@ -1,16 +1,22 @@
-import { Action, Clock, SerializableClassesContainer } from "./types.ts";
+import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
+import { Action, Clock, Model, SerializableClassesContainer } from "./types.ts";
 import { Persister } from "./persist/persister.ts";
 import { MemoryPersister } from "./persist/memory-persister.ts";
+import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
 
-export function defaultPrevalenceOptions<M>(): PrevalenceOptions<M> {
+export function defaultPrevalenceOptions<M extends Model<M>>(
+  classes?: SerializableClassesContainer,
+): PrevalenceOptions<M> {
   return {
-    persister: new MemoryPersister<M>(),
+    persister: new MemoryPersister<M, string>(
+      new SuperserialMarshaller<M>(new Serializer({ classes })),
+    ),
     classes: {},
     clock: Date.now,
   };
 }
 
-export type PrevalenceOptions<M> = {
+export type PrevalenceOptions<M extends Model<M>> = {
   persister: Persister<M>;
   classes: SerializableClassesContainer;
   clock: Clock;
@@ -32,7 +38,7 @@ export type PrevalenceOptions<M> = {
  * @see https://en.wikipedia.org/wiki/System_prevalence
  * @see https://prevayler.org/
  */
-export class Prevalence<M> {
+export class Prevalence<M extends Model<M>> {
   model: M;
   private readonly persister: Persister<M>;
   private readonly classes: SerializableClassesContainer;
@@ -48,12 +54,12 @@ export class Prevalence<M> {
     this.clock = options.clock;
   }
 
-  static async create<M>(
+  static async create<M extends Model<M>>(
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
   ): Promise<Prevalence<M>> {
     const effectiveOptions: PrevalenceOptions<M> = {
-      ...defaultPrevalenceOptions(),
+      ...defaultPrevalenceOptions(options.classes),
       ...options,
     };
 

@@ -1,10 +1,10 @@
-import { JournalEntry } from "../types.ts";
+import { JournalEntry, Model } from "../types.ts";
 
 export type DELETE_ALL = "deleteAll";
 export const DELETE_ALL: DELETE_ALL = "deleteAll" as DELETE_ALL;
 export type LastAppliedTimestamp = number | DELETE_ALL;
 
-export interface Persister<M> {
+export interface Persister<M extends Model<M>> {
   /**
    * Load the model from the persister.
    */

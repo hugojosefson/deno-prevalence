@@ -1,4 +1,4 @@
-import { JournalEntry, KvValue } from "../types.ts";
+import { JournalEntry, KvValue, Model } from "../types.ts";
 import { DELETE_ALL, LastAppliedTimestamp, Persister } from "./persister.ts";
 import { Marshaller } from "../marshall/marshaller.ts";
 
@@ -23,7 +23,7 @@ const JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX: Deno.KvKey = [
  * @template CN The type of the command names.
  */
 export class KvPersister<
-  M,
+  M extends Model<M>,
   D extends KvValue<D>,
 > implements Persister<M> {
   private readonly modelKey: Deno.KvKey;
@@ -40,33 +40,6 @@ export class KvPersister<
       ...prefix,
       ...JOURNAL_LAST_APPLIED_TIMESTAMP_PREFIX,
     ];
-  }
-
-  async saveModelAndClearJournal(
-    model: M,
-    lastAppliedTimestamp: LastAppliedTimestamp,
-  ): Promise<void> {
-    const serializedModel: D = this.marshaller.serializeModel(model);
-    if (lastAppliedTimestamp === DELETE_ALL) {
-      await this.kv.atomic()
-        .set(this.modelKey, serializedModel)
-        .delete(this.journalEntriesKey)
-        .delete(this.journalLastAppliedTimestampKey)
-        .commit();
-    } else {
-      await this.kv.atomic()
-        .set(this.modelKey, serializedModel)
-        .set(this.journalLastAppliedTimestampKey, lastAppliedTimestamp)
-        .commit();
-      const journalResponse: Deno.KvListIterator<D> = await this.kv.list({
-        prefix: this.journalEntriesKey,
-        end: [...this.journalEntriesKey, lastAppliedTimestamp],
-      });
-      for await (const serializedJournalEntryResponse of journalResponse) {
-        const key: Deno.KvKey = serializedJournalEntryResponse.key;
-        await this.kv.delete(key);
-      }
-    }
   }
 
   async loadModel(defaultInitialModel: M): Promise<M> {
@@ -94,6 +67,33 @@ export class KvPersister<
       );
     }
     return journalEntries;
+  }
+
+  async saveModelAndClearJournal(
+    model: M,
+    lastAppliedTimestamp: LastAppliedTimestamp,
+  ): Promise<void> {
+    const serializedModel: D = this.marshaller.serializeModel(model);
+    if (lastAppliedTimestamp === DELETE_ALL) {
+      await this.kv.atomic()
+        .set(this.modelKey, serializedModel)
+        .delete(this.journalEntriesKey)
+        .delete(this.journalLastAppliedTimestampKey)
+        .commit();
+    } else {
+      await this.kv.atomic()
+        .set(this.modelKey, serializedModel)
+        .set(this.journalLastAppliedTimestampKey, lastAppliedTimestamp)
+        .commit();
+      const journalResponse: Deno.KvListIterator<D> = await this.kv.list({
+        prefix: this.journalEntriesKey,
+        end: [...this.journalEntriesKey, lastAppliedTimestamp],
+      });
+      for await (const serializedJournalEntryResponse of journalResponse) {
+        const key: Deno.KvKey = serializedJournalEntryResponse.key;
+        await this.kv.delete(key);
+      }
+    }
   }
 
   async appendToJournal(journalEntry: JournalEntry<M>): Promise<void> {

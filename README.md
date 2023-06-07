@@ -28,84 +28,84 @@ import {
 } from "https://deno.land/x/kv_prevalence/mod.ts";
 import {
   Action,
+  Model,
   SerializableClassesContainer,
 } from "https://deno.land/x/kv_prevalence/src/types.ts";
 
 class User {
-  readonly uuid: number;
-
-  displayName: string;
-
-  constructor(uuid: number, displayName: string) {
-    this.uuid = uuid;
-    this.displayName = displayName;
-  }
+  constructor(
+    readonly uuid: string,
+    public displayName: string,
+  ) {}
 }
-const alice: User = new User(1, "Alice");
+const alice: User = new User("1", "Alice");
 
 type Post = {
   id: string;
   subject: string;
 };
 
-class Model {
+class MyModel implements Model<MyModel> {
   constructor(
     public posts: Record<string, Post>,
-    public users: User[],
+    public users: Record<string, User>,
   ) {}
 }
 
-class AddPostAction implements Action<Model> {
+class AddPostAction implements Action<MyModel> {
   constructor(public post: Post) {}
-  execute(model: Model): void {
+  execute(model: MyModel): void {
     model.posts[this.post.id] = this.post;
   }
 }
 
-class RemovePostAction implements Action<Model> {
+class RemovePostAction implements Action<MyModel> {
   constructor(public postId: string) {}
-  execute(model: Model): void {
+  execute(model: MyModel): void {
     delete model.posts[this.postId];
   }
 }
 
-class AddUserAction implements Action<Model> {
+class AddUserAction implements Action<MyModel> {
   constructor(public user: User) {}
-  execute(model: Model): void {
-    model.users.push(this.user);
+  execute(model: MyModel): void {
+    model.users[this.user.uuid] = this.user;
   }
 }
 
-class RemoveUserAction implements Action<Model> {
-  constructor(public userUuid: User["uuid"]) {}
-  execute(model: Model): void {
-    model.users = model.users.filter((u) => u.uuid !== this.userUuid);
+class RemoveUserAction implements Action<MyModel> {
+  constructor(public userId: string) {}
+  execute(model: MyModel): void {
+    delete model.users[this.userId];
   }
 }
 
 const classes: SerializableClassesContainer = {
   User,
-  Model,
+  MyModel,
   AddPostAction,
   RemovePostAction,
   AddUserAction,
   RemoveUserAction,
 };
 
-const marshaller: Marshaller<Model, string> = new SuperserialMarshaller<Model>(
+const marshaller: Marshaller<MyModel, string> = new SuperserialMarshaller<
+  MyModel
+>(
   new Serializer({ classes }),
 );
 const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
-const persister: Persister<Model> = new KvPersister<Model, string>(
+const persister: Persister<MyModel> = new KvPersister<MyModel, string>(
   kv,
   [],
   marshaller,
 );
-const defaultInitialModel: Model = { posts: {}, users: [] };
-const prevalence = await Prevalence.create<Model>(
+const defaultInitialModel: MyModel = { posts: {}, users: {} };
+const prevalence: Prevalence<MyModel> = await Prevalence.create<MyModel>(
   defaultInitialModel,
   { persister },
 );
+console.dir(prevalence.model);
 await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
 await prevalence.execute(new AddPostAction({ id: "post#2", subject: "Ipsum" }));
 await prevalence.execute(new AddPostAction({ id: "post#3", subject: "Dolor" }));
@@ -120,16 +120,17 @@ for (const post of posts) {
 }
 console.log();
 console.log("Users:");
-for (const user of prevalence.model.users) {
+for (const user of Object.values(prevalence.model.users)) {
   console.log(`${user.uuid}: ${user.displayName}`);
 }
 
 await prevalence.execute(new RemoveUserAction(alice.uuid));
 console.log();
 console.log("Users:");
-for (const user of prevalence.model.users) {
+for (const user of Object.values(prevalence.model.users)) {
   console.log(`${user.uuid}: ${user.displayName}`);
 }
+
 console.log("Done.");
 ```
 

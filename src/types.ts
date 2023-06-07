@@ -1,15 +1,19 @@
 export type { ConstructType } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 
+export type Model<M> = {
+  [K in keyof M]: M[K];
+};
+
 export type SerializableClassesContainer = NonNullable<
   SerializerOptions["classes"]
 >;
 
-export interface Action<M> {
+export interface Action<M extends Model<M>> {
   execute(model: M, clock: Clock): void;
 }
 
-export type JournalEntry<M> = {
+export type JournalEntry<M extends Model<M>> = {
   timestamp: number;
   action: Action<M>;
 };

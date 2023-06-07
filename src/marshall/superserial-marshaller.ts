@@ -1,9 +1,9 @@
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
-import { JournalEntry } from "../types.ts";
+import { JournalEntry, Model } from "../types.ts";
 import { Marshaller } from "./marshaller.ts";
 
 export class SuperserialMarshaller<
-  M,
+  M extends Model<M>,
 > implements Marshaller<M, string> {
   private readonly serializer: Serializer;
 
