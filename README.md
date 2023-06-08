@@ -146,7 +146,7 @@ log("Done.");
 You may run the above example with:
 
 ```sh
-deno run --unstable --reload --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db https://deno.land/x/prevalence/readme/person-invoice.ts
+DEBUG='*' deno run --unstable --allow-env=DEBUG --reload --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db https://deno.land/x/prevalence/readme/person-invoice.ts
 ```
 
 For further usage examples, see the tests:
