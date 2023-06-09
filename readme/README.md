@@ -62,12 +62,12 @@ For further usage examples, see the tests:
 
 #### Actions
 
-- [ ] An action is an instance of a class that implements the `Action`
+- [x] An action is an instance of a class that implements the `Action`
       interface.
-- [ ] An action instance contains all the data needed to execute it, including
+- [x] An action instance contains all the data needed to execute it, including
       the timestamp for the clock.
-- [ ] An action is executed by calling its `execute` method.
-- [ ] An action is executed by the `Prevalence` instance, which passes the model
+- [x] An action is executed by calling its `execute` method.
+- [x] An action is executed by the `Prevalence` instance, which passes the model
       to the action.
 - [ ] In executing an action, the `Prevalence` instance:
   - [ ] Tests the action by executing it on a copy of the model.
