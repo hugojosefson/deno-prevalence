@@ -182,16 +182,25 @@ For further usage examples, see the tests:
 - [ ] An action is executed by calling its `execute` method.
 - [ ] An action is executed by the `Prevalence` instance, which passes the model
       to the action.
-- [ ] Before executing an action, the `Prevalence` instance:
+- [ ] In executing an action, the `Prevalence` instance:
   - [ ] Tests the action by executing it on a copy of the model.
     - [ ] The copy is made if not already exists, by serializing and
           deserializing the model.
-    - [ ] If the action throws an exception, the `Prevalence` instance:
+    - [ ] If the action throws an exception when run on the model copy, the
+          `Prevalence` instance:
       - [ ] Discards the now possibly tainted copy of the model.
       - [ ] Re-throws the exception.
-  - [ ] If the action was successful on the copy, the `Prevalence` instance:
-    - [ ] Append it to the journal:
+  - [ ] If the action was successful on the copy, the `Prevalence` instance
+        will:
+    - [ ] Append a journal entry with the action, to the journal:
       - [ ] `const lastEntryId = await kv.get(["journal", "lastEntryId"])`
+      - [ ] Check that the current model is up-to-date with `lastEntryId`, and
+            if not:
+        - [ ] discard the model copy,
+        - [ ] load the journal entries that were appended since we read
+              `["journal", "lastEntryId"]`,
+        - [ ] apply them to the model
+        - [ ] try again, from testing the action on a copy of the model.
       - [ ] `const newLastEntryId = lastEntryId + 1`
       - [ ] run an atomic operation:
         - [ ] check that `["journal", "lastEntryId"]` hasn't changed since we
@@ -201,13 +210,19 @@ For further usage examples, see the tests:
         - [ ] store the journal entry at
               `["journal", "entries", newLastEntryId]`.
       - [ ] If the atomic operation fails, we:
-        - [ ] load any journal entries that were appended since we read
-              `["journal", "lastEntryId"]`,
-        - [ ] apply them to the model in memory, and
-        - [ ] try again.
-        - [ ] Executes the action on the model.
+        - [ ] discard the model copy,
+        - [ ] load the journal entries that were appended since our model's
+              latest entry was applied,
+        - [ ] apply them to the model
+        - [ ] try again, from testing the action on a copy of the model.
+      - [ ] If the atomic operation succeeds, we:
+        - [ ] Execute the action on the model.
+        - [ ] Update the model with the `lastAppliedJournalEntryId` from the
+              latest journal entry we just applied.
 
 #### Code defensively
 
 - [ ] When programming actions, we should program defensively, so we don't break
       the model or the journal.
+- [ ] Check each step in the above algorithm for async things, and make sure
+      they don't clash in the model or in the model copy.
