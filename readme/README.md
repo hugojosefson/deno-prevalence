@@ -113,3 +113,18 @@ For further usage examples, see the tests:
       the model or the journal.
 - [ ] Check each step in the above algorithm for async things, and make sure
       they don't clash in the model or in the model copy.
+
+Make the system consistent, considering:
+
+- several app instances at Deno Deploy,
+- several `async` code paths in a single app instance,
+
+...at the same time:
+
+- running actions,
+- appending journal entries to the journal,
+
+...and:
+
+- failing at any point,
+- crashing at any point.
