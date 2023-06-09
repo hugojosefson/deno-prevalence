@@ -184,6 +184,8 @@ For further usage examples, see the tests:
       to the action.
 - [ ] Before executing an action, the `Prevalence` instance:
   - [ ] Tests the action by executing it on a copy of the model.
+    - [ ] The copy is made if not already exists, by serializing and
+          deserializing the model.
     - [ ] If the action throws an exception, the `Prevalence` instance:
       - [ ] Discards the now possibly tainted copy of the model.
       - [ ] Re-throws the exception.
