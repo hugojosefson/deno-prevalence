@@ -1,32 +1,39 @@
-import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import {
   Action,
-  Clock,
-  JournalEntry,
   Model,
+  ModelHolder,
+  Query,
   SerializableClassesContainer,
+  ShouldRetryError,
 } from "./types.ts";
-import { Persister } from "./persist/persister.ts";
-import { MemoryPersister } from "./persist/memory-persister.ts";
-import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
 import { logger } from "./log.ts";
+import { Clock, defaultClock, Timestamp } from "./clock.ts";
+import { Marshaller } from "./marshall/marshaller.ts";
+import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
+import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 
 const log0 = logger(import.meta.url);
+const KEY_JOURNAL_LASTENTRYID: Deno.KvKey = [
+  "journal",
+  "lastEntryId",
+];
+const KEY_JOURNAL_ENTRIES = ["journal", "entries"];
 
 export function defaultPrevalenceOptions<M extends Model<M>>(
-  classes?: SerializableClassesContainer,
+  classes: SerializableClassesContainer = {},
+  marshaller: Marshaller<M, string> = new SuperserialMarshaller(
+    new Serializer({ classes }),
+  ),
 ): PrevalenceOptions<M> {
   return {
-    persister: new MemoryPersister<M, string>(
-      new SuperserialMarshaller<M>(new Serializer({ classes })),
-    ),
-    classes: {},
-    clock: Date.now,
+    classes,
+    marshaller,
+    clock: defaultClock,
   };
 }
 
 export type PrevalenceOptions<M extends Model<M>> = {
-  persister: Persister<M>;
+  marshaller: Marshaller<M, string>;
   classes: SerializableClassesContainer;
   clock: Clock;
 };
@@ -36,27 +43,27 @@ export type PrevalenceOptions<M extends Model<M>> = {
  * introduced by Klaus Wuestefeld in 1998 with Prevayler.
  *
  * Saves periodical snapshots of the model, and journal of executed actions
- * since last snapshot, using a Persister.
+ * since last snapshot, to Deno.Kv.
  *
- * The Persister uses a Marshaller to serialize/deserialize the model and the
- * journal.
+ * Uses a Marshaller to serialize/deserialize the model and the journal.
  *
  * @see https://en.wikipedia.org/wiki/System_prevalence
  * @see https://prevayler.org/
  */
 export class Prevalence<M extends Model<M>> {
-  model: M;
-  private readonly persister: Persister<M>;
+  private readonly modelHolder: ModelHolder<M>;
+  private readonly marshaller: Marshaller<M, string>;
   private readonly classes: SerializableClassesContainer;
   private readonly clock: Clock;
+  private readonly kv: Deno.Kv = new Deno.Kv();
 
   private constructor(
-    model: M,
+    modelHolder: ModelHolder<M>,
     options: PrevalenceOptions<M>,
   ) {
-    this.model = model;
-    this.persister = options.persister;
+    this.modelHolder = modelHolder;
     this.classes = options.classes;
+    this.marshaller = options.marshaller;
     this.clock = options.clock;
   }
 
@@ -68,97 +75,139 @@ export class Prevalence<M extends Model<M>> {
     log("defaultInitialModel =", defaultInitialModel);
     log("options =", options);
     const effectiveOptions: PrevalenceOptions<M> = {
-      ...defaultPrevalenceOptions(options.classes),
+      ...defaultPrevalenceOptions(options.classes, options.marshaller),
       ...options,
     };
     log("effectiveOptions =", effectiveOptions);
 
-    const model: M = await effectiveOptions.persister.loadModel(
-      defaultInitialModel,
-    );
-    log("loaded model =", model);
+    // TODO: load model from snapshot + journal
 
-    // sort journal by timestamp, from oldest to newest, in case it was not already done by the persister
-    const journal: JournalEntry<M>[] =
-      (await effectiveOptions.persister.loadJournal()).sort((je1, je2) =>
-        je1.timestamp - je2.timestamp
-      );
-    log("loaded journal =", journal);
-
-    const previouslyAppliedTimestamp =
-      await effectiveOptions.persister.loadLastAppliedTimestamp() ?? 0;
-    log("previouslyAppliedTimestamp =", previouslyAppliedTimestamp);
-
-    // apply all actions in the journal that were not already applied
-    let lastAppliedTimestamp = previouslyAppliedTimestamp;
-    const filteredJournal = journal.filter((journalEntry) =>
-      journalEntry.timestamp > lastAppliedTimestamp
-    );
-    log("filteredJournal =", filteredJournal);
-    if (filteredJournal.length === 0) {
-      log("no journal to apply");
-    } else {
-      filteredJournal.forEach((journalEntry) => {
-        log(
-          "applying journalEntry to model",
-          journalEntry.timestamp,
-          journalEntry.action,
-        );
-        journalEntry.action.execute(
-          model,
-          () => journalEntry.timestamp,
-        );
-        lastAppliedTimestamp = journalEntry.timestamp;
-      });
-      log("applied journal to model");
-      log("lastAppliedTimestamp =", lastAppliedTimestamp);
-    }
-
-    // save updated model, if any action was applied
-    if (lastAppliedTimestamp > previouslyAppliedTimestamp) {
-      log(
-        "saving model, clearing journal, and updating lastAppliedTimestamp",
-        lastAppliedTimestamp,
-      );
-      await effectiveOptions.persister.saveModelAndClearJournal(
-        model,
-        lastAppliedTimestamp,
-      );
-      log("model saved");
-    } else {
-      log("no action applied, no need to save model");
-    }
-
-    return new Prevalence<M>(model, effectiveOptions);
+    const modelHolder = new ModelHolder<M>(model);
+    return new Prevalence<M>(modelHolder, effectiveOptions);
   }
 
   async execute<A extends Action<M>>(action: A): Promise<void> {
-    const timestamp: number = this.clock();
+    const timestamp: Timestamp = this.clock();
     const log = log0.sub("execute");
     log("timestamp =", timestamp);
     log("action =", action);
+    while (true) {
+      try {
+        await this.modelHolder.lock.lock(async () => {
+          log("modelHolder.lock.lock");
 
-    const storedAction: Action<M> = await this.persister.appendToJournal({
-      timestamp,
-      action,
+          // make sure we have a copy of the model
+          if (this.modelHolder.copy === undefined) {
+            // serialize and deserialize the model to make a copy
+            this.modelHolder.copy = this.marshaller.deserializeModel(
+              this.marshaller.serializeModel(this.modelHolder.model),
+            );
+          }
+
+          // mostly for typescript, to make sure this.modelHolder.copy is not undefined
+          if (this.modelHolder.copy === undefined) {
+            throw new Error(
+              "this.modelHolder.copy is undefined, even after serialization and deserialization of this.modelHolder.model",
+            );
+          }
+
+          // execute action on the copy
+          action.execute(
+            this.modelHolder.copy,
+            () => timestamp,
+          );
+
+          // if that went well, check that the current model is up-to-date with `lastEntryId`
+          const lastEntryIdResponse = await this.kv.get(
+            KEY_JOURNAL_LASTENTRYID,
+          );
+          if (
+            lastEntryIdResponse.value !==
+              this.modelHolder.lastAppliedJournalEntryId
+          ) {
+            throw new ShouldRetryError(
+              [
+                "journal.lastEntryId (",
+                JSON.stringify(lastEntryIdResponse.value),
+                ") is not the same as this.modelHolder.lastAppliedJournalEntryId (",
+                JSON.stringify(this.modelHolder.lastAppliedJournalEntryId),
+                ")",
+              ].join(""),
+            );
+          }
+
+          const newLastEntryId = 1n + lastEntryIdResponse.value;
+          const atomicResponse = await this.kv.atomic()
+            .check(lastEntryIdResponse)
+            .check({
+              key: [...KEY_JOURNAL_ENTRIES, newLastEntryId],
+              versionstamp: null,
+            })
+            .set(KEY_JOURNAL_LASTENTRYID, newLastEntryId)
+            .set(
+              [...KEY_JOURNAL_ENTRIES, newLastEntryId],
+              this.marshaller.serializeJournalEntry({
+                timestamp,
+                action,
+              }),
+            )
+            .commit();
+          if (!atomicResponse.ok) {
+            throw new ShouldRetryError(
+              [
+                "Atomic operation failed, should retry:",
+                JSON.stringify(atomicResponse),
+              ].join(" "),
+            );
+          }
+
+          // if that went well, apply the action to the model
+          action.execute(
+            this.modelHolder.model,
+            () => timestamp,
+          );
+
+          // Update the model with the `lastAppliedJournalEntryId` from the latest journal entry we just applied.
+          this.modelHolder.lastAppliedJournalEntryId = newLastEntryId;
+        });
+      } catch (error) {
+        log("error =", error);
+        this.modelHolder.copy = undefined;
+        if (error instanceof ShouldRetryError) {
+          // TODO: load the journal entries that were appended since we read `KEY_JOURNAL_LASTENTRYID`,
+          // TODO: apply them to the model
+          continue;
+        }
+        throw error;
+      }
+    }
+  }
+
+  async query<Q extends Query<M, R>, R>(query: Q): Promise<R> {
+    const timestamp: Timestamp = this.clock();
+    const log = log0.sub("query");
+    log("timestamp =", timestamp);
+    log("query =", query);
+    return await new Promise<R>((resolve, reject) => {
+      this.modelHolder.lock.run(async () => {
+        log("modelHolder.lock.run");
+        try {
+          const result: Awaited<R> = await query(
+            this.modelHolder.model,
+            this.clock,
+          );
+          log("result =", result);
+          resolve(result);
+        } catch (error) {
+          log("error =", error);
+          reject(error);
+        }
+      });
     });
-    log("storedAction =", storedAction);
-
-    storedAction.execute(
-      this.model,
-      () => timestamp,
-    );
-    log("storedAction executed on model");
   }
 
   async snapshot(): Promise<void> {
-    const timestamp: number = this.clock();
+    const timestamp: Timestamp = this.clock();
     const log = log0.sub("snapshot");
-    log("timestamp =", timestamp);
-    await this.persister.saveModelAndClearJournal(
-      this.model,
-      timestamp,
-    );
-    log("model saved");
   }
 }

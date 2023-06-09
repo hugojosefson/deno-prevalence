@@ -10,7 +10,6 @@ export { SuperserialMarshaller } from "./src/marshall/superserial-marshaller.ts"
 
 export type {
   Action,
-  Clock,
   JournalEntry,
   JSONValue,
   KvValue,
@@ -19,3 +18,4 @@ export type {
 } from "./src/types.ts";
 
 export { type Logger, logger } from "./src/log.ts";
+export { Clock } from "./src/clock.ts";
