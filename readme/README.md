@@ -33,7 +33,7 @@ Please see the
 You may run the above example with:
 
 ```sh
-DEBUG='*' deno run --unstable --allow-env=DEBUG --reload --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db https://deno.land/x/prevalence/readme/person-invoice.ts
+"@@include(./run-person-invoice.sh)";
 ```
 
 For further usage examples, see the tests:
