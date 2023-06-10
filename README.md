@@ -163,6 +163,10 @@ For further usage examples, see the tests:
       key `["journal", "lastEntryId"]`.
 - [ ] It is incremented by 1 for every journal entry.
 
+#### Timestamps
+
+- [x] Timestamps are ISO 8601 strings, as returned by `dayjs().toISOString()`.
+
 #### Snapshot
 
 - [ ] The snapshot is a serialized copy of the model after a certain
@@ -175,50 +179,65 @@ For further usage examples, see the tests:
 
 #### Actions
 
-- [ ] An action is an instance of a class that implements the `Action`
+- [x] An action is an instance of a class that implements the `Action`
       interface.
-- [ ] An action instance contains all the data needed to execute it, including
+- [x] An action instance contains all the data needed to execute it, including
       the timestamp for the clock.
-- [ ] An action is executed by calling its `execute` method.
-- [ ] An action is executed by the `Prevalence` instance, which passes the model
+- [x] An action is executed by calling its `execute` method.
+- [x] An action is executed by the `Prevalence` instance, which passes the model
       to the action.
 - [ ] In executing an action, the `Prevalence` instance:
-  - [ ] Tests the action by executing it on a copy of the model.
-    - [ ] The copy is made if not already exists, by serializing and
+  - [x] Tests the action by executing it on a copy of the model.
+    - [x] The copy is made if not already exists, by serializing and
           deserializing the model.
-    - [ ] If the action throws an exception when run on the model copy, the
+    - [x] If the action throws an exception when run on the model copy, the
           `Prevalence` instance:
-      - [ ] Discards the now possibly tainted copy of the model.
-      - [ ] Re-throws the exception.
+      - [x] Discards the now possibly tainted copy of the model.
+      - [x] Re-throws the exception.
   - [ ] If the action was successful on the copy, the `Prevalence` instance
         will:
     - [ ] Append a journal entry with the action, to the journal:
-      - [ ] `const lastEntryId = await kv.get(["journal", "lastEntryId"])`
-      - [ ] Check that the current model is up-to-date with `lastEntryId`, and
+      - [x] `const lastEntryId = await kv.get(["journal", "lastEntryId"])`
+      - [x] Check that the current model is up-to-date with `lastEntryId`, and
             if not:
-        - [ ] discard the model copy,
+        - [x] discard the model copy,
         - [ ] load the journal entries that were appended since we read
               `["journal", "lastEntryId"]`,
         - [ ] apply them to the model
         - [ ] try again, from testing the action on a copy of the model.
-      - [ ] `const newLastEntryId = lastEntryId + 1`
-      - [ ] run an atomic operation:
-        - [ ] check that `["journal", "lastEntryId"]` hasn't changed since we
+      - [x] `const newLastEntryId = lastEntryId + 1`
+      - [x] run an atomic operation:
+        - [x] check that `["journal", "lastEntryId"]` hasn't changed since we
               read it,
-        - [ ] check that `["journal", "entries", newLastEntryId]` is `null`,
-        - [ ] save `newLastEntryId` to `["journal", "lastEntryId"]`, and
-        - [ ] store the journal entry at
+        - [x] check that `["journal", "entries", newLastEntryId]` is `null`,
+        - [x] save `newLastEntryId` to `["journal", "lastEntryId"]`, and
+        - [x] store the journal entry at
               `["journal", "entries", newLastEntryId]`.
-      - [ ] If the atomic operation fails, we:
-        - [ ] discard the model copy,
-        - [ ] load the journal entries that were appended since our model's
+      - [x] If the atomic operation fails, we:
+        - [x] discard the model copy,
+        - [x] load the journal entries that were appended since our model's
               latest entry was applied,
-        - [ ] apply them to the model
-        - [ ] try again, from testing the action on a copy of the model.
-      - [ ] If the atomic operation succeeds, we:
-        - [ ] Execute the action on the model.
-        - [ ] Update the model with the `lastAppliedJournalEntryId` from the
+        - [x] apply them to the model
+        - [x] try again, from testing the action on a copy of the model.
+      - [x] If the atomic operation succeeds, we:
+        - [x] Execute the action on the model.
+        - [x] Update the model with the `lastAppliedJournalEntryId` from the
               latest journal entry we just applied.
+
+#### BroadcastChannel
+
+Use a `BroadcastChannel` to keep all instances of the app in up-to-date as
+quickly as possible.
+
+- [ ] Broadcast all journal entries to all instances.
+
+When an instance receives a broadcast, it should:
+
+- [ ] Check if the broadcast is newer than the latest journal entry it has
+      applied.
+- [ ] If so, it should apply the journal entry to its model.
+- [ ] If the broadcast is older than the latest journal entry it has applied, it
+      should ignore it.
 
 #### Code defensively
 

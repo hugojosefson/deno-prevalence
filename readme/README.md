@@ -111,6 +111,21 @@ For further usage examples, see the tests:
         - [x] Update the model with the `lastAppliedJournalEntryId` from the
               latest journal entry we just applied.
 
+#### BroadcastChannel
+
+Use a `BroadcastChannel` to keep all instances of the app in up-to-date as
+quickly as possible.
+
+- [ ] Broadcast all journal entries to all instances.
+
+When an instance receives a broadcast, it should:
+
+- [ ] Check if the broadcast is newer than the latest journal entry it has
+      applied.
+- [ ] If so, it should apply the journal entry to its model.
+- [ ] If the broadcast is older than the latest journal entry it has applied, it
+      should ignore it.
+
 #### Code defensively
 
 - [ ] When programming actions, we should program defensively, so we don't break
