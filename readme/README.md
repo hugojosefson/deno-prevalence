@@ -42,6 +42,31 @@ For further usage examples, see the tests:
 
 ## TODO
 
+### Synchronization and ordering
+
+#### Being up-to-date
+
+For an instance to _be able to know_ whether it's up-to-date, it needs to:
+
+- [ ] Keep track of the latest journal entry it has applied, in the
+      `ModelHolder.lastAppliedJournalEntryId`.
+- [ ] Keep a queue of journal entries it has received, but not yet applied.
+- [ ] Keep track of the latest journal entry it has received.
+
+For an instance to _know_ that it's up-to-date:
+
+- [ ] If the latest journal entry it has applied is the same as the latest
+      journal entry it has received, it is up-to-date.
+
+#### Receiving journal entries
+
+When receiving a journal entry, we should:
+
+- [ ] Check that the journal entry is newer than the latest journal entry we
+      have applied.
+- [ ] If so, we should apply the journal entry to our model.
+- [ ] If not, we should ignore the journal entry.
+
 ### Prevalence
 
 #### lastJournalEntryId
