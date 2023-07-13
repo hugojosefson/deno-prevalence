@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run
-import { readAll } from "https://deno.land/std@0.190.0/streams/read_all.ts";
+import { readAll } from "https://deno.land/std@0.194.0/streams/read_all.ts";
 import { deserialize } from "npm:serializr@3.0.2";
-import { Model } from "./example-decorator-classes.ts";
+import { Model } from "./decorator-classes.ts";
 import { JSONValue } from "../src/types.ts";
 import { logger } from "../src/log.ts";
 const log = logger(import.meta.url);

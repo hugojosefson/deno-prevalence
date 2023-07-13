@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run
 import { serialize } from "npm:serializr@3.0.2";
-import { Message, Model, User } from "./example-decorator-classes.ts";
+import { Message, Model, User } from "./decorator-classes.ts";
 import { JSONValue } from "../src/types.ts";
 
 const alice: User = new User(1, "Alice");
