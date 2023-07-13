@@ -67,10 +67,10 @@ export class Prevalence<M extends Model<M>> {
     this.clock = options.clock;
   }
 
-  static async create<M extends Model<M>>(
+  static create<M extends Model<M>>(
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
-  ): Promise<Prevalence<M>> {
+  ): Prevalence<M> {
     const log = log0.sub("create");
     log("defaultInitialModel =", defaultInitialModel);
     log("options =", options);
@@ -80,8 +80,8 @@ export class Prevalence<M extends Model<M>> {
     };
     log("effectiveOptions =", effectiveOptions);
 
-    // TODO: load model from snapshot + journal
-
+    // TODO: instead, load model from snapshot + journal
+    const model = defaultInitialModel;
     const modelHolder = new ModelHolder<M>(model);
     return new Prevalence<M>(modelHolder, effectiveOptions);
   }
@@ -209,5 +209,9 @@ export class Prevalence<M extends Model<M>> {
   async snapshot(): Promise<void> {
     const timestamp: Timestamp = this.clock();
     const log = log0.sub("snapshot");
+    log("timestamp =", timestamp);
+    await new Promise((r) => {
+      setTimeout(r, 0);
+    });
   }
 }

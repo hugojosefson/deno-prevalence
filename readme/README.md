@@ -17,7 +17,7 @@ serialize/deserialize the model and the journal.
 
 ## Requirements
 
-Requires [Deno](https://deno.land/) v1.32 or later, with the `--unstable` flag.
+Requires [Deno](https://deno.land/) v1.35 or later, with the `--unstable` flag.
 
 ## API
 
@@ -27,13 +27,20 @@ Please see the
 ## Example usage
 
 ```typescript
-"@@include(./person-invoice.ts)";
+"@@include(../examples/person-invoice.ts)";
 ```
 
 You may run the above example with:
 
 ```sh
-DEBUG='*' deno run --unstable --allow-env=DEBUG --reload --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db https://deno.land/x/prevalence/readme/person-invoice.ts
+DEBUG='*'       \
+deno run         \
+  --reload        \
+  --unstable       \
+  --allow-env=DEBUG \
+  --allow-write=example-person-invoice.db \
+  --allow-read=example-person-invoice.db   \
+  https://deno.land/x/prevalence/examples/person-invoice.ts
 ```
 
 For further usage examples, see the tests:
