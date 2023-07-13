@@ -12,7 +12,7 @@ export class ModelHolder<M extends Model<M>> {
   model: M;
   copy?: M;
   lastAppliedJournalEntryId = 0n;
-  lock: Lock = new Lock();
+  lock: typeof Lock = new Lock();
   constructor(model: M) {
     this.model = model;
   }
