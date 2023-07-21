@@ -56,12 +56,17 @@ export class Prevalence<M extends Model<M>> {
   private readonly classes: SerializableClassesContainer;
   private readonly clock: Clock;
   private readonly kv: Deno.Kv = new Deno.Kv();
+  get name(): string {
+    return this.modelHolder.name;
+  }
 
   static create<M extends Model<M>>(
+    name: string,
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
   ): Prevalence<M> {
     const log = log0.sub("create");
+    log("name =", name);
     log("defaultInitialModel =", defaultInitialModel);
     log("options =", options);
     const effectiveOptions: PrevalenceOptions<M> = {
@@ -72,7 +77,7 @@ export class Prevalence<M extends Model<M>> {
 
     // TODO: instead, load model from snapshot + journal
     const model = defaultInitialModel;
-    const modelHolder = new ModelHolder<M>(model);
+    const modelHolder = new ModelHolder<M>(name, model);
     return new Prevalence<M>(modelHolder, effectiveOptions);
   }
 
@@ -136,30 +141,20 @@ export class Prevalence<M extends Model<M>> {
             );
           }
 
-          const newLastEntryId = 1n + lastEntryIdResponse.value;
-          const atomicResponse = await this.kv.atomic()
+          const newLastEntryId: bigint = 1n + lastEntryIdResponse.value;
+          const serializedEntry: string = this.marshaller.serializeJournalEntry(
+            {
+              timestamp,
+              action,
+            },
+          );
+          const entryKey: Deno.KvKey = [...KEY_JOURNAL_ENTRIES, newLastEntryId];
+          await this.kv.atomic()
             .check(lastEntryIdResponse)
-            .check({
-              key: [...KEY_JOURNAL_ENTRIES, newLastEntryId],
-              versionstamp: null,
-            })
+            .check({ key: entryKey, versionstamp: null })
             .set(KEY_JOURNAL_LASTENTRYID, newLastEntryId)
-            .set(
-              [...KEY_JOURNAL_ENTRIES, newLastEntryId],
-              this.marshaller.serializeJournalEntry({
-                timestamp,
-                action,
-              }),
-            )
+            .set(entryKey, serializedEntry)
             .commit();
-          if (!atomicResponse.ok) {
-            throw new ShouldRetryError(
-              [
-                "Atomic operation failed, should retry:",
-                JSON.stringify(atomicResponse),
-              ].join(" "),
-            );
-          }
 
           // if that went well, apply the action to the model
           action.execute(
@@ -170,10 +165,11 @@ export class Prevalence<M extends Model<M>> {
           // Update the model with the `lastAppliedJournalEntryId` from the latest journal entry we just applied.
           this.modelHolder.lastAppliedJournalEntryId = newLastEntryId;
         });
+        break;
       } catch (error) {
         log("error =", error);
         this.modelHolder.copy = undefined;
-        if (error instanceof ShouldRetryError) {
+        if (error?.ok === false) {
           // TODO: load the journal entries that were appended since we read `KEY_JOURNAL_LASTENTRYID`,
           // TODO: apply them to the model
           continue;

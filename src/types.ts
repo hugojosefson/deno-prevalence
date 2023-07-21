@@ -1,3 +1,4 @@
+import "https://deno.land/x/websocket_broadcastchannel@0.7.0/polyfill.ts";
 import Lock from "npm:lock-queue@1.0.1";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
@@ -15,19 +16,28 @@ export type Model<M> = {
  * Keeps track of a model and its copy, and the last applied journal entry id.
  */
 export class ModelHolder<M extends Model<M>> {
+  name: string;
   model: M;
   copy?: M;
   lastAppliedJournalEntryId = 0n;
   lock: typeof Lock = new Lock();
-  constructor(model: M) {
+  /**
+   * Notifies all instances that a new JournalEntry has been saved.
+   */
+  broadcastChannel: BroadcastChannel;
+  constructor(name: string, model: M) {
+    this.name = name;
     this.model = model;
+    this.broadcastChannel = new BroadcastChannel(name);
   }
 }
 
 /**
  * @anti-pattern Throwing this error will cause the action to be retried.
  */
-export class ShouldRetryError extends Error {}
+export class ShouldRetryError extends Error {
+  readonly ok = false;
+}
 
 /**
  * The "classes" property of {@link SerializerOptions}.
