@@ -57,16 +57,6 @@ export class Prevalence<M extends Model<M>> {
   private readonly clock: Clock;
   private readonly kv: Deno.Kv = new Deno.Kv();
 
-  private constructor(
-    modelHolder: ModelHolder<M>,
-    options: PrevalenceOptions<M>,
-  ) {
-    this.modelHolder = modelHolder;
-    this.classes = options.classes;
-    this.marshaller = options.marshaller;
-    this.clock = options.clock;
-  }
-
   static create<M extends Model<M>>(
     defaultInitialModel: M,
     options: Partial<PrevalenceOptions<M>>,
@@ -84,6 +74,16 @@ export class Prevalence<M extends Model<M>> {
     const model = defaultInitialModel;
     const modelHolder = new ModelHolder<M>(model);
     return new Prevalence<M>(modelHolder, effectiveOptions);
+  }
+
+  private constructor(
+    modelHolder: ModelHolder<M>,
+    options: PrevalenceOptions<M>,
+  ) {
+    this.modelHolder = modelHolder;
+    this.classes = options.classes;
+    this.marshaller = options.marshaller;
+    this.clock = options.clock;
   }
 
   async execute<A extends Action<M>>(action: A): Promise<void> {
