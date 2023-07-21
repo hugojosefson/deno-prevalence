@@ -29,6 +29,7 @@ export function defaultPrevalenceOptions<M extends Model<M>>(
     classes,
     marshaller,
     clock: defaultClock,
+    kv: new Deno.Kv(),
   };
 }
 
@@ -36,6 +37,7 @@ export type PrevalenceOptions<M extends Model<M>> = {
   marshaller: Marshaller<M, string>;
   classes: SerializableClassesContainer;
   clock: Clock;
+  kv: Deno.Kv;
 };
 
 /**
@@ -55,7 +57,7 @@ export class Prevalence<M extends Model<M>> {
   private readonly marshaller: Marshaller<M, string>;
   private readonly classes: SerializableClassesContainer;
   private readonly clock: Clock;
-  private readonly kv: Deno.Kv = new Deno.Kv();
+  private readonly kv: Deno.Kv;
   get name(): string {
     return this.modelHolder.name;
   }
@@ -89,6 +91,15 @@ export class Prevalence<M extends Model<M>> {
     this.classes = options.classes;
     this.marshaller = options.marshaller;
     this.clock = options.clock;
+    this.kv = options.kv;
+
+    this.modelHolder.broadcastChannel.addEventListener(
+      "message",
+      this.checkAndApplyJournalEntries.bind(this),
+    );
+  }
+
+  async checkAndApplyJournalEntries(_event: Event): Promise<void> {
   }
 
   async execute<A extends Action<M>>(action: A): Promise<void> {
@@ -156,7 +167,21 @@ export class Prevalence<M extends Model<M>> {
             .set(entryKey, serializedEntry)
             .commit();
 
-          // if that went well, apply the action to the model
+          // if that went well, tell everyone
+          this.modelHolder.broadcastChannel.postMessage({
+            type: "journalEntryAppended",
+            lastEntryId: newLastEntryId,
+            action,
+            timestamp,
+          });
+
+          // TODO: only apply actions to the model via this.modelHolder.listeningChannel:
+          // TODO: (but how do we await here for the action to be applied?)
+          // solution: when each action is applied, it should post a message to a local channel
+          // solution: and we should await for that message here. the message should contain the entryId
+          // solution: of the action that was just applied. then we can await for that entryId to be applied.
+
+          // apply the action to our model
           action.execute(
             this.modelHolder.model,
             () => timestamp,

@@ -74,12 +74,16 @@ const marshaller: Marshaller<MyModel, string> = new SuperserialMarshaller<
 >(
   new Serializer({ classes }),
 );
-const _kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
+const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
 const defaultInitialModel: MyModel = { posts: {}, users: {} };
 const prevalence: Prevalence<MyModel> = Prevalence.create<MyModel>(
   "example-person-invoice",
   defaultInitialModel,
-  { marshaller, classes },
+  {
+    classes,
+    kv,
+    marshaller,
+  },
 );
 
 await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));

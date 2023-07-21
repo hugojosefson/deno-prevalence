@@ -22,13 +22,19 @@ export class ModelHolder<M extends Model<M>> {
   lastAppliedJournalEntryId = 0n;
   lock: typeof Lock = new Lock();
   /**
-   * Notifies all instances that a new JournalEntry has been saved.
+   * Notifies all instances that a new JournalEntry has been saved to the db.
    */
   broadcastChannel: BroadcastChannel;
+
+  /**
+   * Listens for new JournalEntries, and applies them to the model.
+   */
+  listeningChannel: BroadcastChannel;
   constructor(name: string, model: M) {
     this.name = name;
     this.model = model;
     this.broadcastChannel = new BroadcastChannel(name);
+    this.listeningChannel = new BroadcastChannel(name);
   }
 }
 

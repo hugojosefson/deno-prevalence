@@ -102,11 +102,16 @@ const marshaller: Marshaller<MyModel, string> = new SuperserialMarshaller<
 >(
   new Serializer({ classes }),
 );
-const _kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
+const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
 const defaultInitialModel: MyModel = { posts: {}, users: {} };
-const prevalence: Prevalence<MyModel> = await Prevalence.create<MyModel>(
+const prevalence: Prevalence<MyModel> = Prevalence.create<MyModel>(
+  "example-person-invoice",
   defaultInitialModel,
-  { marshaller, classes },
+  {
+    classes,
+    kv,
+    marshaller,
+  },
 );
 
 await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
@@ -259,11 +264,11 @@ quickly as possible.
 
 When an instance receives a broadcast, it should:
 
-- [ ] Check if the broadcast is newer than the latest journal entry it has
+- [ ] Check if the broadcast is `1n` newer than the latest journal entry it has
       applied.
 - [ ] If so, it should apply the journal entry to its model.
-- [ ] If the broadcast is older than the latest journal entry it has applied, it
-      should ignore it.
+- [ ] Otherwise, it should ignore it, and instead re-sync with the latest from
+      the db.
 
 #### Code defensively
 
