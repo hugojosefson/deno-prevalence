@@ -1,7 +1,8 @@
 import "https://deno.land/x/websocket_broadcastchannel@0.7.0/polyfill.ts";
-import Lock from "npm:lock-queue@1.0.1";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
+import { Synchronized } from "./synchronized.ts";
+import { Wrapper } from "./wrapper.ts";
 
 export type { ConstructType } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 
@@ -17,10 +18,9 @@ export type Model<M> = {
  */
 export class ModelHolder<M extends Model<M>> {
   name: string;
-  model: M;
-  copy?: M;
+  model: Synchronized<M>;
+  copy: Synchronized<Wrapper<M>>;
   lastAppliedJournalEntryId = 0n;
-  lock: typeof Lock = new Lock();
   /**
    * Notifies all instances that a new JournalEntry has been saved to the db.
    */
@@ -32,7 +32,8 @@ export class ModelHolder<M extends Model<M>> {
   listeningChannel: BroadcastChannel;
   constructor(name: string, model: M) {
     this.name = name;
-    this.model = model;
+    this.model = new Synchronized<M>(model);
+    this.copy = new Synchronized<Wrapper<M>>({ value: undefined });
     this.broadcastChannel = new BroadcastChannel(name);
     this.listeningChannel = new BroadcastChannel(name);
   }
@@ -80,6 +81,26 @@ export type JournalEntry<M extends Model<M>> = {
   timestamp: Timestamp;
   action: Action<M>;
 };
+
+export function isJournalEntry<M extends Model<M>>(
+  entry: unknown,
+): entry is JournalEntry<M> {
+  return typeof entry === "object" &&
+    entry !== null &&
+    "timestamp" in entry &&
+    typeof entry.timestamp === "bigint" &&
+    "action" in entry &&
+    isAction(entry.action);
+}
+
+export function isAction<M extends Model<M>>(
+  action: unknown,
+): action is Action<M> {
+  return typeof action === "object" &&
+    action !== null &&
+    "execute" in action &&
+    typeof action.execute === "function";
+}
 
 /**
  * Things that JSON.stringify can serialize.
