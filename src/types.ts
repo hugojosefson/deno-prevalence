@@ -152,6 +152,34 @@ export type KvValue<T extends KvValue<T>> =
  */
 export type Returns<T> = () => T;
 
+/**
+ * A Promise of something, or just the thing itself.
+ */
+export type PromiseOr<T> = T | Promise<T>;
+
+/**
+ * A function that returns something, or just the thing itself.
+ */
+export type ReturnsOr<T> = Returns<T> | T;
+
+/**
+ * Resolves a value, promise, or getter of a value or promise.
+ * @param valueOrPromiseOrGetter
+ */
+export async function resolve<T>(
+  valueOrPromiseOrGetter: ReturnsOr<PromiseOr<T>>,
+): Promise<T> {
+  if (valueOrPromiseOrGetter instanceof Promise) {
+    return await valueOrPromiseOrGetter;
+  }
+  // if callable, call it
+  if (typeof valueOrPromiseOrGetter === "function") {
+    return await resolve(await (valueOrPromiseOrGetter as CallableFunction)());
+  }
+  // otherwise, just return it
+  return valueOrPromiseOrGetter;
+}
+
 export function isMessageEvent(event: Event): event is MessageEvent {
   return event instanceof MessageEvent;
 }

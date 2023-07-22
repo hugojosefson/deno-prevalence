@@ -10,6 +10,9 @@ import {
   MessageWithType,
   Model,
   ModelHolder,
+  PromiseOr,
+  resolve,
+  ReturnsOr,
   SerializableClassesContainer,
   ShouldRetryError,
 } from "./types.ts";
@@ -39,7 +42,7 @@ export function defaultPrevalenceOptions<M extends Model<M>>(
     classes,
     marshaller,
     clock: defaultClock,
-    kv: new Deno.Kv(),
+    kv: Deno.openKv.bind(Deno),
   };
 }
 
@@ -47,7 +50,7 @@ export type PrevalenceOptions<M extends Model<M>> = {
   marshaller: Marshaller<M, string>;
   classes: SerializableClassesContainer;
   clock: Clock;
-  kv: Deno.Kv;
+  kv: ReturnsOr<PromiseOr<Deno.Kv>>;
 };
 
 /**
@@ -67,7 +70,7 @@ export class Prevalence<M extends Model<M>> {
   private readonly marshaller: Marshaller<M, string>;
   private readonly classes: SerializableClassesContainer;
   private readonly clock: Clock;
-  private readonly kv: Deno.Kv;
+  private readonly kv: ReturnsOr<PromiseOr<Deno.Kv>>;
   get name(): string {
     return this.modelHolder.name;
   }
@@ -82,7 +85,7 @@ export class Prevalence<M extends Model<M>> {
     log("defaultInitialModel =", defaultInitialModel);
     log("options =", options);
     const effectiveOptions: PrevalenceOptions<M> = {
-      ...defaultPrevalenceOptions(options.classes, options.marshaller),
+      ...(defaultPrevalenceOptions(options.classes, options.marshaller)),
       ...options,
     };
     log("effectiveOptions =", effectiveOptions);
@@ -219,7 +222,8 @@ export class Prevalence<M extends Model<M>> {
     const entryKeys: Deno.KvKey[] = range(sinceJournalEntryId + 1n, lastEntryId)
       .map(this.getEntryKey);
     log("entryKeys =", entryKeys);
-    return (await this.kv.getMany(entryKeys))
+    const kv: Deno.Kv = await resolve(this.kv);
+    return (await kv.getMany(entryKeys))
       .filter((response) => isJournalEntry(response.value))
       .map((response) => response.value as JournalEntry<M>);
   }
@@ -300,7 +304,8 @@ export class Prevalence<M extends Model<M>> {
 
             const entryKey: Deno.KvKey = this.getEntryKey(id);
 
-            await this.kv.atomic()
+            const kv: Deno.Kv = await resolve(this.kv);
+            await kv.atomic()
               .check(lastEntryIdResponse)
               .check({ key: entryKey, versionstamp: null })
               .set(KEY_JOURNAL_LASTENTRYID, id)
@@ -337,8 +342,9 @@ export class Prevalence<M extends Model<M>> {
     return [...KEY_JOURNAL_ENTRIES, newLastEntryId];
   }
 
-  private getLastEntryIdResponse(): Promise<Deno.KvEntryMaybe<bigint>> {
-    return this.kv.get(KEY_JOURNAL_LASTENTRYID);
+  private async getLastEntryIdResponse(): Promise<Deno.KvEntryMaybe<bigint>> {
+    const kv: Deno.Kv = await resolve(this.kv);
+    return kv.get(KEY_JOURNAL_LASTENTRYID);
   }
 
   async snapshot(): Promise<void> {

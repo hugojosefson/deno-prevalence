@@ -104,7 +104,7 @@ const marshaller: Marshaller<MyModel, string> = new SuperserialMarshaller<
 );
 const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
 const defaultInitialModel: MyModel = { posts: {}, users: {} };
-const prevalence: Prevalence<MyModel> = Prevalence.create<MyModel>(
+const prevalence: Prevalence<MyModel> = await Prevalence.create<MyModel>(
   "example-person-invoice",
   defaultInitialModel,
   {
