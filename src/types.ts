@@ -2,7 +2,7 @@ import "https://deno.land/x/websocket_broadcastchannel@0.7.0/polyfill.ts";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import { Synchronized } from "./synchronized.ts";
-import { Wrapper } from "./wrapper.ts";
+import { wrap, Wrapper } from "./wrapper.ts";
 
 export type { ConstructType } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 
@@ -33,9 +33,24 @@ export class ModelHolder<M extends Model<M>> {
   constructor(name: string, model: M) {
     this.name = name;
     this.model = new Synchronized<M>(model);
-    this.copy = new Synchronized<Wrapper<M>>({ value: undefined });
+    this.copy = new Synchronized<Wrapper<M>>(wrap<M>(undefined));
     this.broadcastChannel = new BroadcastChannel(name);
     this.listeningChannel = new BroadcastChannel(name);
+  }
+
+  waitForJournalEntryApplied(id: bigint): Promise<void> {
+    return new Promise((resolve) => {
+      const listener = (event: Event) => {
+        if (
+          isMessageEvent(event) && isMessageJournalEntryApplied(event.data) &&
+          event.data.id === id
+        ) {
+          this.listeningChannel.removeEventListener("message", listener);
+          resolve();
+        }
+      };
+      this.listeningChannel.addEventListener("message", listener);
+    });
   }
 }
 
@@ -78,6 +93,7 @@ export type Query<M extends Model<M>, R> = (model: M, clock: Clock) => R;
  * A journal entry is a timestamped action.
  */
 export type JournalEntry<M extends Model<M>> = {
+  id: bigint;
   timestamp: Timestamp;
   action: Action<M>;
 };
@@ -149,19 +165,17 @@ export function isMessageEventWithType<M extends Model<M>>(
 
 export const MESSAGE_TYPE = {
   JOURNAL_ENTRY_APPENDED: "JOURNAL_ENTRY_APPENDED",
+  JOURNAL_ENTRY_APPLIED: "JOURNAL_ENTRY_APPLIED",
 } as const;
 
 export type MessageType = keyof typeof MESSAGE_TYPE;
 
 export interface MessageWithType<M extends Model<M>> {
   type: MessageType;
-  lastEntryId: bigint;
-  action: Action<M>;
-  timestamp: Timestamp;
 }
 
 export interface JournalEntryAppended<M extends Model<M>>
-  extends MessageWithType<M> {
+  extends MessageWithType<M>, JournalEntry<M> {
   type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED;
 }
 
@@ -183,8 +197,19 @@ function isMessageWithSpecificType<M extends Model<M>, T extends MessageType>(
     data.type === type;
 }
 
-export function isJournalEntryAppended<M extends Model<M>>(
+export function isMessageJournalEntryAppended<M extends Model<M>>(
   data: unknown,
 ): data is JournalEntryAppended<M> {
   return isMessageWithSpecificType(data, MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED);
+}
+
+export interface JournalEntryApplied<M extends Model<M>> {
+  type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPLIED;
+  id: bigint;
+}
+
+export function isMessageJournalEntryApplied<M extends Model<M>>(
+  data: unknown,
+): data is JournalEntryApplied<M> {
+  return isMessageWithSpecificType(data, MESSAGE_TYPE.JOURNAL_ENTRY_APPLIED);
 }
