@@ -280,22 +280,22 @@ export class Prevalence<M extends Model<M>> {
             // if that went well, check that modelHolder is up-to-date with `lastEntryId`
             const lastEntryIdResponse: Deno.KvEntryMaybe<bigint> = await this
               .getLastEntryIdResponse();
+            const lastEntryId: bigint = lastEntryIdResponse.value ?? 0n;
             if (
-              lastEntryIdResponse.value !==
-                this.modelHolder.lastAppliedJournalEntryId
+              lastEntryId !== this.modelHolder.lastAppliedJournalEntryId
             ) {
               throw new ShouldRetryError(
                 [
                   "journal.lastEntryId (",
-                  JSON.stringify(lastEntryIdResponse.value),
+                  lastEntryId,
                   ") is not the same as this.modelHolder.lastAppliedJournalEntryId (",
-                  JSON.stringify(this.modelHolder.lastAppliedJournalEntryId),
+                  this.modelHolder.lastAppliedJournalEntryId,
                   ")",
                 ].join(""),
               );
             }
 
-            const id: bigint = 1n + lastEntryIdResponse.value;
+            const id: bigint = 1n + lastEntryId;
             const entry: JournalEntry<M> = { id, timestamp, action };
             const serializedEntry: string = this.marshaller
               .serializeJournalEntry(
