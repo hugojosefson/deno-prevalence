@@ -70,7 +70,7 @@ export class Prevalence<M extends Model<M>> {
   private readonly marshaller: Marshaller<M, string>;
   private readonly classes: SerializableClassesContainer;
   private readonly clock: Clock;
-  private readonly kv: ReturnsOr<PromiseOr<Deno.Kv>>;
+  private readonly kvPromise: Promise<Deno.Kv>;
   get name(): string {
     return this.modelHolder.name;
   }
@@ -104,7 +104,7 @@ export class Prevalence<M extends Model<M>> {
     this.classes = options.classes;
     this.marshaller = options.marshaller;
     this.clock = options.clock;
-    this.kv = options.kv;
+    this.kvPromise = resolve(options.kv);
 
     this.modelHolder.listeningChannel.addEventListener(
       "message",
@@ -222,7 +222,7 @@ export class Prevalence<M extends Model<M>> {
     const entryKeys: Deno.KvKey[] = range(sinceJournalEntryId + 1n, lastEntryId)
       .map(this.getEntryKey);
     log("entryKeys =", entryKeys);
-    const kv: Deno.Kv = await resolve(this.kv);
+    const kv: Deno.Kv = await this.kvPromise;
     return (await kv.getMany(entryKeys))
       .filter((response) => isJournalEntry(response.value))
       .map((response) => response.value as JournalEntry<M>);
@@ -304,7 +304,7 @@ export class Prevalence<M extends Model<M>> {
 
             const entryKey: Deno.KvKey = this.getEntryKey(id);
 
-            const kv: Deno.Kv = await resolve(this.kv);
+            const kv: Deno.Kv = await this.kvPromise;
             await kv.atomic()
               .check(lastEntryIdResponse)
               .check({ key: entryKey, versionstamp: null })
@@ -343,7 +343,7 @@ export class Prevalence<M extends Model<M>> {
   }
 
   private async getLastEntryIdResponse(): Promise<Deno.KvEntryMaybe<bigint>> {
-    const kv: Deno.Kv = await resolve(this.kv);
+    const kv: Deno.Kv = await this.kvPromise;
     return kv.get(KEY_JOURNAL_LASTENTRYID);
   }
 
