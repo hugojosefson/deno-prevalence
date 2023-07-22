@@ -114,3 +114,56 @@ export type KvValue<T extends KvValue<T>> =
  * A function that returns something.
  */
 export type Returns<T> = () => T;
+
+export function isMessageEvent(event: Event): event is MessageEvent {
+  return event instanceof MessageEvent;
+}
+
+export function isMessageEventWithType<M extends Model<M>>(
+  event: Event,
+): event is MessageEvent & { data: MessageWithType<M> } {
+  return isMessageEvent(event) &&
+    isMessageWithType(event.data);
+}
+
+export const MESSAGE_TYPE = {
+  JOURNAL_ENTRY_APPENDED: "JOURNAL_ENTRY_APPENDED",
+} as const;
+
+export type MessageType = keyof typeof MESSAGE_TYPE;
+
+export interface MessageWithType<M extends Model<M>> {
+  type: MessageType;
+  lastEntryId: bigint;
+  action: Action<M>;
+  timestamp: Timestamp;
+}
+
+export interface JournalEntryAppended<M extends Model<M>>
+  extends MessageWithType<M> {
+  type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED;
+}
+
+function isMessageWithType<M extends Model<M>>(
+  data: unknown,
+): data is MessageWithType<M> {
+  return typeof data === "object" &&
+    data !== null &&
+    "type" in data &&
+    typeof data.type === "string" &&
+    Object.values(MESSAGE_TYPE).includes(data.type as MessageType);
+}
+
+function isMessageWithSpecificType<M extends Model<M>, T extends MessageType>(
+  data: unknown,
+  type: T,
+): data is MessageWithType<M> & { type: T } {
+  return isMessageWithType(data) &&
+    data.type === type;
+}
+
+export function isJournalEntryAppended<M extends Model<M>>(
+  data: unknown,
+): data is JournalEntryAppended<M> {
+  return isMessageWithSpecificType(data, MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED);
+}
