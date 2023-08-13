@@ -27,3 +27,23 @@ export function range(start: bigint, end: bigint, step = 1n): bigint[] {
   }
   return result;
 }
+
+/**
+ * Creates a function that gets a property's value from an object.
+ * @param key the name of the property to get
+ * @template T the type of the object
+ */
+export function prop<T>(key: keyof T): (obj: T) => T[keyof T] {
+  return (obj: T) => obj[key];
+}
+
+/**
+ * Typed identity function, for convenient casting when mapping.
+ * @param value The value to return.
+ * @template R The type of the value as returned.
+ * @template T The type of the value as passed in.
+ * @returns R The value "as R".
+ */
+export function identity<R extends T, T = R>(value: T): R {
+  return value as R;
+}

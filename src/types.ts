@@ -14,22 +14,31 @@ export type Model<M> = {
 };
 
 /**
- * Keeps track of a model and its copy, and the last applied journal entry id.
+ * Keeps track of a {@link Model} and its copy, and the last applied
+ * {@link JournalEntry.id}.
  */
 export class ModelHolder<M extends Model<M>> {
   name: string;
   model: Synchronized<M>;
   copy: Synchronized<Wrapper<M>>;
   lastAppliedJournalEntryId = 0n;
+
   /**
-   * Notifies all instances that a new JournalEntry has been saved to the db.
+   * Notifies all instances that a new {@link JournalEntry} has been saved to
+   * the db.
    */
   broadcastChannel: BroadcastChannel;
 
   /**
-   * Listens for new JournalEntries, and applies them to the model.
+   * Listens for new {@link JournalEntries}, and applies them to the
+   * {@link Model}.
    */
   listeningChannel: BroadcastChannel;
+
+  /**
+   * @param name The name of the {@link Model}.
+   * @param model The {@link Model}.
+   */
   constructor(name: string, model: M) {
     this.name = name;
     this.model = new Synchronized<M>(model);
@@ -38,6 +47,13 @@ export class ModelHolder<M extends Model<M>> {
     this.listeningChannel = new BroadcastChannel(name);
   }
 
+  /**
+   * Returns a `Promise` that resolves when the {@link Model} has been updated
+   * to the given `id`.
+   * @param id The id of the {@link JournalEntry} to wait for.
+   * @returns A `Promise` that resolves when the {@link Model} has been updated
+   * to the given `id`.
+   */
   waitForJournalEntryApplied(id: bigint): Promise<void> {
     return new Promise((resolve) => {
       const listener = (event: Event) => {
@@ -55,7 +71,8 @@ export class ModelHolder<M extends Model<M>> {
 }
 
 /**
- * @anti-pattern Throwing this error will cause the action to be retried.
+ * @anti-pattern Throwing this error will cause the {@link Action} to be
+ * retried.
  */
 export class ShouldRetryError extends Error {
   readonly ok = false;
@@ -69,35 +86,53 @@ export type SerializableClassesContainer = NonNullable<
 >;
 
 /**
- * Defines a mutation action that can be applied to a model.
+ * Defines a mutation action that can be applied to a {@link Model}.
  *
  * The action is applied by calling {@link Action.execute}.
  *
- * @param M The model type.
+ * @template M The type of the {@link Model}.
  */
 export interface Action<M extends Model<M>> {
   /**
-   * Applies the action to the model.
-   * @param model The model to apply the action to.
-   * @param clock The clock, from which the action can get the "current" timestamp.
+   * Applies the action to the {@link Model}.
+   * @param model The {@link Model} to apply the action to.
+   * @param clock The {@link Clock}, from which the action can get the "current" {@link Timestamp}.
    */
   execute(model: M, clock: Clock): void;
 }
 
 /**
- * A query is just a (possibly async) function that gets passed the model and a clock, returns something. Must be pure.
+ * A `Query` is just a (possibly async) function that gets passed the
+ * {@link Model} and a {@link Clock}, returns something. Must be pure.
  */
-export type Query<M extends Model<M>, R> = (model: M, clock: Clock) => R;
+export type Query<M extends Model<M>, R> = (
+  model: Readonly<M>,
+  clock: Clock,
+) => R;
 
 /**
- * A journal entry is a timestamped action.
+ * A `JournalEntry` is a {@link Timestamp}ed {@link Action}.
+ *
+ * @template M The type of the {@link Model}.
+ * @param id The id of the `JournalEntry`.
+ * @param timestamp The {@link Timestamp} of the `JournalEntry`.
+ * @param action The {@link Action} of the `JournalEntry`.
  */
-export type JournalEntry<M extends Model<M>> = {
+export interface JournalEntry<M extends Model<M>> {
   id: bigint;
   timestamp: Timestamp;
   action: Action<M>;
-};
+}
 
+/**
+ * Plural of {@link JournalEntry}.
+ */
+export type JournalEntries<M extends Model<M>> = JournalEntry<M>[];
+
+/**
+ * Type-guard for {@link JournalEntry}.
+ * @param entry Potential {@link JournalEntry}.
+ */
 export function isJournalEntry<M extends Model<M>>(
   entry: unknown,
 ): entry is JournalEntry<M> {
@@ -109,6 +144,12 @@ export function isJournalEntry<M extends Model<M>>(
     isAction(entry.action);
 }
 
+/**
+ * Type-guard for {@link Action}.
+ * @param action Potential {@link Action}.
+ * @template M The type of the {@link Model}.
+ * @returns voolean Whether the given object is an {@link Action}.
+ */
 export function isAction<M extends Model<M>>(
   action: unknown,
 ): action is Action<M> {
@@ -119,7 +160,7 @@ export function isAction<M extends Model<M>>(
 }
 
 /**
- * Things that JSON.stringify can serialize.
+ * Things that {@link JSON.stringify} can serialize.
  */
 export type JSONValue =
   | string
@@ -153,7 +194,7 @@ export type KvValue<T extends KvValue<T>> =
 export type Returns<T> = () => T;
 
 /**
- * A Promise of something, or just the thing itself.
+ * A `Promise` of something, or just the thing itself.
  */
 export type PromiseOr<T> = T | Promise<T>;
 
@@ -163,7 +204,7 @@ export type PromiseOr<T> = T | Promise<T>;
 export type ReturnsOr<T> = Returns<T> | T;
 
 /**
- * Resolves a value, promise, or getter of a value or promise.
+ * Resolves a value, `Promise`, or getter of a value or `Promise`.
  * @param valueOrPromiseOrGetter
  */
 export async function resolve<T>(
@@ -180,10 +221,22 @@ export async function resolve<T>(
   return valueOrPromiseOrGetter;
 }
 
+/**
+ * Type-guard for {@link MessageEvent}.
+ * @param event Potential {@link MessageEvent}.
+ */
 export function isMessageEvent(event: Event): event is MessageEvent {
   return event instanceof MessageEvent;
 }
 
+/**
+ * Type-guard for {@link MessageEvent} with a {@link MessageWithType} in its
+ * {@link MessageEvent.data} property.
+ * @param event Potential {@link MessageEvent}.
+ * @template M The type of the {@link Model}.
+ * @returns Whether the given object is a {@link MessageEvent} with a
+ * {@link MessageWithType} in its {@link MessageEvent.data} property.
+ */
 export function isMessageEventWithType<M extends Model<M>>(
   event: Event,
 ): event is MessageEvent & { data: MessageWithType<M> } {
@@ -191,22 +244,39 @@ export function isMessageEventWithType<M extends Model<M>>(
     isMessageWithType(event.data);
 }
 
+/**
+ * The valid values for the a {@link MessageType}.
+ */
 export const MESSAGE_TYPE = {
   JOURNAL_ENTRY_APPENDED: "JOURNAL_ENTRY_APPENDED",
   JOURNAL_ENTRY_APPLIED: "JOURNAL_ENTRY_APPLIED",
 } as const;
 
+/**
+ * The "type" property of a {@link MessageWithType}.
+ */
 export type MessageType = keyof typeof MESSAGE_TYPE;
 
+/**
+ * Has a "type" property, that is a {@link MessageType}.
+ */
 export interface MessageWithType<M extends Model<M>> {
   type: MessageType;
 }
 
+/**
+ * A {@link JournalEntry} that has been appended to the journal,
+ * but not necessarily been applied to the {@link Model}.
+ */
 export interface JournalEntryAppended<M extends Model<M>>
   extends MessageWithType<M>, JournalEntry<M> {
   type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED;
 }
 
+/**
+ * Type-guard for {@link MessageWithType}.
+ * @param data Potential {@link MessageWithType}.
+ */
 function isMessageWithType<M extends Model<M>>(
   data: unknown,
 ): data is MessageWithType<M> {
@@ -217,6 +287,11 @@ function isMessageWithType<M extends Model<M>>(
     Object.values(MESSAGE_TYPE).includes(data.type as MessageType);
 }
 
+/**
+ * Type-guard for {@link MessageWithType} with a specific {@link MessageType}.
+ * @param data Potential {@link MessageWithType}.
+ * @param type The {@link MessageType} to check for.
+ */
 function isMessageWithSpecificType<M extends Model<M>, T extends MessageType>(
   data: unknown,
   type: T,
@@ -225,17 +300,28 @@ function isMessageWithSpecificType<M extends Model<M>, T extends MessageType>(
     data.type === type;
 }
 
+/**
+ * Type-guard for {@link JournalEntryAppended}.
+ * @param data Potential {@link JournalEntryAppended}.
+ */
 export function isMessageJournalEntryAppended<M extends Model<M>>(
   data: unknown,
 ): data is JournalEntryAppended<M> {
   return isMessageWithSpecificType(data, MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED);
 }
 
+/**
+ * A {@link JournalEntry} that has been applied to the {@link Model}.
+ */
 export interface JournalEntryApplied<M extends Model<M>> {
   type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPLIED;
   id: bigint;
 }
 
+/**
+ * Type-guard for {@link JournalEntryApplied}.
+ * @param data Potential {@link JournalEntryApplied}.
+ */
 export function isMessageJournalEntryApplied<M extends Model<M>>(
   data: unknown,
 ): data is JournalEntryApplied<M> {

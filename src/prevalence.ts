@@ -3,6 +3,7 @@ import {
   isJournalEntry,
   isMessageEventWithType,
   isMessageJournalEntryAppended,
+  JournalEntries,
   JournalEntry,
   JournalEntryAppended,
   MESSAGE_TYPE,
@@ -21,7 +22,7 @@ import { Clock, defaultClock, Timestamp } from "./clock.ts";
 import { Marshaller } from "./marshall/marshaller.ts";
 import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
-import { range } from "./fn.ts";
+import { identity, prop, range } from "./fn.ts";
 import { Wrapper } from "./wrapper.ts";
 import { s } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/fn.ts";
 
@@ -31,6 +32,18 @@ const KEY_JOURNAL_LASTENTRYID: Deno.KvKey = [
   "lastEntryId",
 ];
 const KEY_JOURNAL_ENTRIES = ["journal", "entries"];
+const KEY_SNAPSHOT = ["snapshot"];
+
+function getSnapshotKey(timestamp: Timestamp): Deno.KvKey {
+  return [...KEY_SNAPSHOT, timestamp.toString()];
+}
+
+export type PrevalenceOptions<M extends Model<M>> = {
+  marshaller: Marshaller<M, string>;
+  classes: SerializableClassesContainer;
+  clock: Clock;
+  kv: ReturnsOr<PromiseOr<Deno.Kv>>;
+};
 
 export function defaultPrevalenceOptions<M extends Model<M>>(
   classes: SerializableClassesContainer = {},
@@ -45,13 +58,6 @@ export function defaultPrevalenceOptions<M extends Model<M>>(
     kv: Deno.openKv.bind(Deno),
   };
 }
-
-export type PrevalenceOptions<M extends Model<M>> = {
-  marshaller: Marshaller<M, string>;
-  classes: SerializableClassesContainer;
-  clock: Clock;
-  kv: ReturnsOr<PromiseOr<Deno.Kv>>;
-};
 
 /**
  * TypeScript implementation for Deno of the Prevalence design pattern, as
@@ -112,6 +118,13 @@ export class Prevalence<M extends Model<M>> {
     );
   }
 
+  /**
+   * Execute an {@link Action} on the {@link Model}, and append the resulting
+   * {@link JournalEntry} to the journal.
+   * @param action The {@link Action} to execute.
+   * @returns a `Promise` that resolves when the {@link JournalEntry} has been
+   * appended to the journal, and the {@link Model} has been updated.
+   */
   async execute<A extends Action<M>>(action: A): Promise<void> {
     const log = log0.sub(Prevalence.prototype.execute.name);
     log("action =", action);
@@ -121,6 +134,16 @@ export class Prevalence<M extends Model<M>> {
     await this.modelHolder.waitForJournalEntryApplied(journalEntry.id);
   }
 
+  /**
+   * Routes an incoming {@link MessageEvent} with {@link MessageWithType} on
+   * its "data" property, to the appropriate handler.
+   * @param event The {@link MessageEvent} to route.
+   * @returns a `Promise` that resolves when the {@link MessageEvent} has been
+   * routed.
+   * @throws an `Error` if the {@link Event} is a {@link MessageEvent} with a
+   * {@link MessageWithType} on its "data" property, but the {@link MessageType}
+   * is unknown.
+   */
   async routeIncomingMessage(event: Event): Promise<void> {
     const log = log0.sub(Prevalence.prototype.routeIncomingMessage.name);
     if (!isMessageEventWithType(event)) {
@@ -139,13 +162,16 @@ export class Prevalence<M extends Model<M>> {
   }
 
   /**
-   * Checks that we have appended all journal entries since {@link this.modelHolder.lastAppliedJournalEntryId}.
-   * If not, loads them, applies them to the model, and updates {@link this.modelHolder.lastAppliedJournalEntryId}.
-   * Uses {@link this.modelHolder.modelLock} to make sure that no other process is doing the same thing at the same time.
-   * @param message
+   * Checks that we have appended all journal entries since
+   * {@link ModelHolder.lastAppliedJournalEntryId}. If not, loads them,
+   * applies them to the model, and updates
+   * {@link ModelHolder.lastAppliedJournalEntryId}.
+   * Uses {@link Synchronized} to make sure that no other process is doing the
+   * same thing at the same time.
+   * @param message The {@link JournalEntryAppended} message.
    */
   private async checkAndApplyJournalEntries(
-    message: JournalEntryAppended<M>,
+    message?: JournalEntryAppended<M>,
   ): Promise<void> {
     await this.modelHolder.model.doWith(async (model: M) => {
       const log = log0.sub(
@@ -156,15 +182,18 @@ export class Prevalence<M extends Model<M>> {
       const lastAppliedJournalEntryId: bigint =
         this.modelHolder.lastAppliedJournalEntryId;
       log("lastAppliedJournalEntryId =", lastAppliedJournalEntryId);
-      const id: undefined | bigint = message.id;
+      const id: undefined | bigint = message?.id ?? lastAppliedJournalEntryId;
       log("id =", id);
       if (id <= lastAppliedJournalEntryId) {
-        log("lastEntryId <= lastAppliedJournalEntryId");
+        log(
+          "lastEntryId <= lastAppliedJournalEntryId, so apparently already applied.",
+        );
         return;
       }
-      const journalEntries: JournalEntry<M>[] = await this
+      const journalEntries: JournalEntries<M> = await this
         .loadJournalEntriesSince(
           lastAppliedJournalEntryId,
+          /** TODO: deserialize here? and when we load them from db? */
           message,
         );
       log("journalEntries =", journalEntries);
@@ -182,10 +211,20 @@ export class Prevalence<M extends Model<M>> {
     });
   }
 
+  /**
+   * Load all {@link JournalEntries} since the given {@link JournalEntry.id}.
+   * @param sinceJournalEntryId The {@link JournalEntry.id} since which to load
+   * {@link JournalEntries}.
+   * @param journalEntryAppended Optionally, the {@link JournalEntryAppended}
+   * message that triggered this load. May be used to avoid loading the last
+   * entry if it is the one that triggered this load.
+   * @returns Promise<JournalEntries> a `Promise` that resolves to an array of
+   * {@link JournalEntry}.
+   */
   async loadJournalEntriesSince(
     sinceJournalEntryId: bigint,
     journalEntryAppended?: JournalEntryAppended<M>,
-  ): Promise<JournalEntry<M>[]> {
+  ): Promise<JournalEntries<M>> {
     const log = log0.sub(Prevalence.prototype.loadJournalEntriesSince.name);
     log("sinceJournalEntryId =", sinceJournalEntryId);
 
@@ -224,10 +263,17 @@ export class Prevalence<M extends Model<M>> {
     log("entryKeys =", entryKeys);
     const kv: Deno.Kv = await this.kvPromise;
     return (await kv.getMany(entryKeys))
-      .filter((response) => isJournalEntry(response.value))
-      .map((response) => response.value as JournalEntry<M>);
+      .map(prop("value"))
+      .filter(isJournalEntry)
+      .map(identity<JournalEntry<M>>);
   }
 
+  /**
+   * Get the `id` for the last appended {@link JournalEntry} in the journal.
+   * @private
+   * @returns Promise<bigint> a `Promise` that resolves to the `id` of the last
+   * {@link JournalEntry} in the journal.
+   */
   private async getLastEntryId(): Promise<bigint> {
     const lastEntryIdResponse: Deno.KvEntryMaybe<bigint> = await this
       .getLastEntryIdResponse();
@@ -241,6 +287,25 @@ export class Prevalence<M extends Model<M>> {
     return lastEntryIdResponse.value;
   }
 
+  /**
+   * Test an {@link Action} on a copy of the {@link Model}, and then append the
+   * {@link JournalEntry} to the journal.
+   *
+   * Will
+   *
+   * @param action The {@link Action} to test, and append to the journal.
+   * @returns Promise<JournalEntryAppended> a `Promise` that resolves to the
+   * {@link JournalEntryAppended}, when it has been appended to the journal.
+   * @throws Error if the {@link Action} throws an `Error`.
+   * @throws Error if the {@link JournalEntry} cannot be appended to the
+   * journal.
+   * @throws Error if the {@link JournalEntry} cannot be read back from the
+   * journal.
+   * @throws Error if the {@link JournalEntry} cannot be applied to the
+   * {@link Model}.
+   * @throws Error if the {@link JournalEntry} cannot be broadcast to the
+   * {@link BroadcastChannel}.
+   */
   async testOnCopyAndAppend<A extends Action<M>>(
     action: A,
   ): Promise<JournalEntryAppended<M>> {
@@ -329,8 +394,9 @@ export class Prevalence<M extends Model<M>> {
           copyWrapper.value = undefined;
         });
         if (error?.ok === false) {
-          // TODO: load the journal entries that were appended since we read `KEY_JOURNAL_LASTENTRYID`,
-          // TODO: apply them to the model
+          // load the journal entries that were appended since we read `KEY_JOURNAL_LASTENTRYID`,
+          // apply them to the model
+          await this.checkAndApplyJournalEntries();
           continue;
         }
         throw error;
@@ -338,21 +404,44 @@ export class Prevalence<M extends Model<M>> {
     }
   }
 
-  private getEntryKey(newLastEntryId: bigint): Deno.KvKey {
-    return [...KEY_JOURNAL_ENTRIES, newLastEntryId];
+  /**
+   * Generate the key for a {@link JournalEntry} with the given `id`.
+   * @param entryId the `id` of the {@link JournalEntry} to generate the
+   * {@link Deno.KvKey} for.
+   * @private
+   */
+  private getEntryKey(entryId: bigint): Deno.KvKey {
+    return [...KEY_JOURNAL_ENTRIES, entryId];
   }
 
+  /**
+   * Get the whole response object from Deno.Kv, for the `id` of the last
+   * appended {@link JournalEntry} in the journal.
+   * @private
+   * @returns Promise<Deno.KvEntryMaybe<bigint>> a `Promise` that resolves to
+   * the whole response from Deno.Kv for the {@link KEY_JOURNAL_LASTENTRYID}
+   * key.
+   */
   private async getLastEntryIdResponse(): Promise<Deno.KvEntryMaybe<bigint>> {
     const kv: Deno.Kv = await this.kvPromise;
     return kv.get(KEY_JOURNAL_LASTENTRYID);
   }
 
-  async snapshot(): Promise<void> {
+  /**
+   * Save a snapshot of the {@link Model} to Deno.Kv.
+   * @returns Promise<Timestamp> a `Promise` that resolves to the
+   * {@link Timestamp} of the snapshot.
+   */
+  async snapshot(): Promise<Timestamp> {
     const timestamp: Timestamp = this.clock();
     const log = log0.sub("snapshot");
     log("timestamp =", timestamp);
-    await new Promise((r) => {
-      setTimeout(r, 0);
-    });
+    const key: Deno.KvKey = getSnapshotKey(timestamp);
+    const value: string = this.marshaller.serializeModel(
+      this.modelHolder.model.readOnly(identity),
+    );
+    const kv: Deno.Kv = await this.kvPromise;
+    await kv.set(key, value);
+    return timestamp;
   }
 }
