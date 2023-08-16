@@ -1,4 +1,5 @@
 import "https://deno.land/x/websocket_broadcastchannel@0.7.0/polyfill.ts";
+import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import { Synchronized } from "./synchronized.ts";
@@ -67,6 +68,11 @@ export class ModelHolder<M extends Model<M>> {
       };
       this.listeningChannel.addEventListener("message", listener);
     });
+  }
+
+  [Symbol.dispose]() {
+    this.listeningChannel.close();
+    this.broadcastChannel.close();
   }
 }
 

@@ -1,3 +1,4 @@
+import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import {
   Action,
   isJournalEntry,
@@ -132,6 +133,10 @@ export class Prevalence<M extends Model<M>> {
       action,
     );
     await this.modelHolder.waitForJournalEntryApplied(journalEntry.id);
+  }
+
+  get model(): M {
+    return this.modelHolder.model.readOnly(identity);
   }
 
   /**
@@ -291,8 +296,6 @@ export class Prevalence<M extends Model<M>> {
    * Test an {@link Action} on a copy of the {@link Model}, and then append the
    * {@link JournalEntry} to the journal.
    *
-   * Will
-   *
    * @param action The {@link Action} to test, and append to the journal.
    * @returns Promise<JournalEntryAppended> a `Promise` that resolves to the
    * {@link JournalEntryAppended}, when it has been appended to the journal.
@@ -443,5 +446,10 @@ export class Prevalence<M extends Model<M>> {
     const kv: Deno.Kv = await this.kvPromise;
     await kv.set(key, value);
     return timestamp;
+  }
+
+  async [Symbol.asyncDispose]() {
+    this.modelHolder[Symbol.dispose]();
+    await this.kvPromise.then((kv) => kv.close());
   }
 }
