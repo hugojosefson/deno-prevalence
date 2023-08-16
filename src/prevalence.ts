@@ -450,6 +450,6 @@ export class Prevalence<M extends Model<M>> {
 
   async [Symbol.asyncDispose]() {
     this.modelHolder[Symbol.dispose]();
-    await this.kvPromise.then((kv) => kv.close());
+    (await this.kvPromise).close();
   }
 }
