@@ -1,6 +1,6 @@
 import { describe, it } from "https://deno.land/std@0.198.0/testing/bdd.ts";
 import { assertEquals } from "https://deno.land/std@0.198.0/assert/assert_equals.ts";
-import { using } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
+import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import { Prevalence } from "../mod.ts";
 
 class Post {
@@ -24,7 +24,7 @@ type MyModel = {
 
 describe("prevalence", () => {
   it("create", async () => {
-    await using(
+    await usingResource(
       [
         () =>
           Prevalence.create(
