@@ -1,5 +1,5 @@
-import { s } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/fn.ts";
-import dayjs from "npm:dayjs@1.11.9";
+import { s } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/fn.ts";
+import dayjs from "npm:dayjs@1.11.10";
 
 const TIMESTAMP_REGEX =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d+)Z$/;

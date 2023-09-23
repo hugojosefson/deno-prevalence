@@ -29,7 +29,7 @@ import { SuperserialMarshaller } from "./marshall/superserial-marshaller.ts";
 import { Serializer } from "https://deno.land/x/superserial@0.3.4/serializer.ts";
 import { identity, prop, range } from "./fn.ts";
 import { Wrapper } from "./wrapper.ts";
-import { s } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/fn.ts";
+import { s } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/fn.ts";
 
 const log0 = logger(import.meta.url);
 const KEY_JOURNAL_LASTENTRYID: Deno.KvKey = [

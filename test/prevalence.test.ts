@@ -1,8 +1,8 @@
-import { describe, it } from "https://deno.land/std@0.198.0/testing/bdd.ts";
-import { assertEquals } from "https://deno.land/std@0.198.0/assert/assert_equals.ts";
+import { describe, it } from "https://deno.land/std@0.202.0/testing/bdd.ts";
+import { assertEquals } from "https://deno.land/std@0.202.0/assert/assert_equals.ts";
 import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import { Action, Prevalence } from "../mod.ts";
-import { assertInstanceOf } from "https://deno.land/std@0.198.0/assert/assert_instance_of.ts";
+import { assertInstanceOf } from "https://deno.land/std@0.202.0/assert/assert_instance_of.ts";
 
 class Post {
   constructor(
