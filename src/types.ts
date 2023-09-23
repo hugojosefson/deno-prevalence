@@ -2,6 +2,7 @@ import "https://deno.land/x/websocket_broadcastchannel@0.7.0/polyfill.ts";
 import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
+import { SerializedString } from "./marshall/serialized.ts";
 import { Synchronized } from "./synchronized.ts";
 import { wrap, Wrapper } from "./wrapper.ts";
 
@@ -275,8 +276,10 @@ export interface MessageWithType<M extends Model<M>> {
  * but not necessarily been applied to the {@link Model}.
  */
 export interface JournalEntryAppended<M extends Model<M>>
-  extends MessageWithType<M>, JournalEntry<M> {
+  extends MessageWithType<M> {
   type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED;
+  id: JournalEntry<M>["id"];
+  journalEntry: SerializedString<JournalEntry<M>>;
 }
 
 /**

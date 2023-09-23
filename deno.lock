@@ -1,5 +1,59 @@
 {
-  "version": "2",
+  "version": "3",
+  "packages": {
+    "specifiers": {
+      "npm:dayjs@1.11.9": "npm:dayjs@1.11.9",
+      "npm:lock-queue@1.0.1": "npm:lock-queue@1.0.1",
+      "npm:serializr@3.0.2": "npm:serializr@3.0.2"
+    },
+    "npm": {
+      "bluebird@2.11.0": {
+        "integrity": "sha512-UfFSr22dmHPQqPP9XWHRhq+gWnHCYguQGkXQlbyPtW5qTnhFWA8/iXg765tH0cAjy7l/zPJ1aBTO0g5XgA7kvQ==",
+        "dependencies": {}
+      },
+      "co-bluebird@1.1.0": {
+        "integrity": "sha512-JuoemMXxQjYAxbfRrNpOsLyiwDiY8mXvGqJyYLM7jMySDJtnMklW3V2o8uyubpc1eN2YoRsAdfZ1lfKCd3lsrA==",
+        "dependencies": {
+          "bluebird": "bluebird@2.11.0",
+          "co-use": "co-use@1.1.0"
+        }
+      },
+      "co-use@1.1.0": {
+        "integrity": "sha512-1lVRtdywv41zQO/xvI2wU8w6oFcUYT6T84YKSxN25KN4N4Kld3scLovt8FjDmD63Cm7HtyRWHjezt+IanXmkyA==",
+        "dependencies": {}
+      },
+      "dayjs@1.11.9": {
+        "integrity": "sha512-QvzAURSbQ0pKdIye2txOzNaHmxtUBXerpY0FJsFXUMKbIZeFm5ht1LS/jFsrncjnmtv8HsG0W2g6c0zUjZWmpA==",
+        "dependencies": {}
+      },
+      "is-generator@1.0.3": {
+        "integrity": "sha512-G56jBpbJeg7ds83HW1LuShNs8J73Fv3CPz/bmROHOHlnKkN8sWb9ujiagjmxxMUywftgq48HlBZELKKqFLk0oA==",
+        "dependencies": {}
+      },
+      "lock-queue@1.0.1": {
+        "integrity": "sha512-axSXruUPzFIxcocEsZxVNGvTV8acnwUq5m4+jIcV8P2mEHITwwoQZG20pQQQB4KrOWzX3G0r1YHLMiDmmVFu/g==",
+        "dependencies": {
+          "bluebird": "bluebird@2.11.0",
+          "promisify-any": "promisify-any@2.0.1"
+        }
+      },
+      "promisify-any@2.0.1": {
+        "integrity": "sha512-pVaGouFbTVxqpVJ+T5A15olNJDASAZHYq5cXz6mWdr6/X34mVWiG9MSdzHTcVBCv4aqBP7wGspi7BUSRbEmhsw==",
+        "dependencies": {
+          "bluebird": "bluebird@2.11.0",
+          "co-bluebird": "co-bluebird@1.1.0",
+          "is-generator": "is-generator@1.0.3"
+        }
+      },
+      "serializr@3.0.2": {
+        "integrity": "sha512-bCACTuCiAEjtk1NxkATc3yz2j/8OoaWYxRkC4D5yq0ikZeLO7KLmmI/owmvJ/N4vS9SX4fZTXgSmsNzWtxDJ/Q==",
+        "dependencies": {}
+      }
+    }
+  },
+  "redirects": {
+    "https://deno.land/x/is_what/src/index.ts": "https://deno.land/x/is_what@v4.1.15/src/index.ts"
+  },
   "remote": {
     "https://deno.land/std@0.194.0/_util/asserts.ts": "178dfc49a464aee693a7e285567b3d0b555dc805ff490505a8aae34f9cfb1462",
     "https://deno.land/std@0.194.0/_util/os.ts": "d932f56d41e4f6a6093d56044e29ce637f8dcc43c5a90af43504a889cf1775e3",
@@ -95,6 +149,7 @@
     "https://deno.land/x/debug@0.2.0/deps.ts": "c00793c24e4d0a15c796c7ef3b9a9a3ac4ea06cad9ef7c68bcb538310e262ea0",
     "https://deno.land/x/debug@0.2.0/format.ts": "e5c81071cdb2e529b2dc3aa379428217a49af45bf59b6511812e2bba9023f1bc",
     "https://deno.land/x/debug@0.2.0/mod.ts": "32e961550c7358a88a9bb2606ac70eeb168305298f5ae1e9536018d8f0c54118",
+    "https://deno.land/x/is_what@v4.1.15/src/index.ts": "e55b975d532b71a0e32501ada85ae3c67993b75dc1047c6d1a2e00368b789af0",
     "https://deno.land/x/quiet_debug@v1.0.0/mod.ts": "4f21865c4b4f5ec27f8a4c5fb620b24401b76590688d7fe34bc5f862d0c4a335",
     "https://deno.land/x/superserial@0.3.4/deserialize.ts": "444c0d2017bc30665c0db00dd1980e35b53fbe2aa1ce1fcda45e7c5d4609ffce",
     "https://deno.land/x/superserial@0.3.4/mod.ts": "c3202f75812fc7e81088bebfa40b7901d3fa58724380707438a569d6a2e0ec47",
@@ -123,56 +178,5 @@
     "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/web-socket-broadcast-channel.ts": "7ac8e8a0eb4fb88fd85e1f1098216f8a15a530ad5987c38ecb8e8cc6ff589941",
     "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/web-socket-client-server.ts": "51606abf77e669448b6b2a37c3d068b56bf591246507701228e6b92e035d5324",
     "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/web-socket-server.ts": "08326428496176b0b4089b5ac1f702ddc9ddc12f3859024a2e8edfa33656c709"
-  },
-  "npm": {
-    "specifiers": {
-      "dayjs@1.11.9": "dayjs@1.11.9",
-      "lock-queue@1.0.1": "lock-queue@1.0.1",
-      "serializr@3.0.2": "serializr@3.0.2"
-    },
-    "packages": {
-      "bluebird@2.11.0": {
-        "integrity": "sha512-UfFSr22dmHPQqPP9XWHRhq+gWnHCYguQGkXQlbyPtW5qTnhFWA8/iXg765tH0cAjy7l/zPJ1aBTO0g5XgA7kvQ==",
-        "dependencies": {}
-      },
-      "co-bluebird@1.1.0": {
-        "integrity": "sha512-JuoemMXxQjYAxbfRrNpOsLyiwDiY8mXvGqJyYLM7jMySDJtnMklW3V2o8uyubpc1eN2YoRsAdfZ1lfKCd3lsrA==",
-        "dependencies": {
-          "bluebird": "bluebird@2.11.0",
-          "co-use": "co-use@1.1.0"
-        }
-      },
-      "co-use@1.1.0": {
-        "integrity": "sha512-1lVRtdywv41zQO/xvI2wU8w6oFcUYT6T84YKSxN25KN4N4Kld3scLovt8FjDmD63Cm7HtyRWHjezt+IanXmkyA==",
-        "dependencies": {}
-      },
-      "dayjs@1.11.9": {
-        "integrity": "sha512-QvzAURSbQ0pKdIye2txOzNaHmxtUBXerpY0FJsFXUMKbIZeFm5ht1LS/jFsrncjnmtv8HsG0W2g6c0zUjZWmpA==",
-        "dependencies": {}
-      },
-      "is-generator@1.0.3": {
-        "integrity": "sha512-G56jBpbJeg7ds83HW1LuShNs8J73Fv3CPz/bmROHOHlnKkN8sWb9ujiagjmxxMUywftgq48HlBZELKKqFLk0oA==",
-        "dependencies": {}
-      },
-      "lock-queue@1.0.1": {
-        "integrity": "sha512-axSXruUPzFIxcocEsZxVNGvTV8acnwUq5m4+jIcV8P2mEHITwwoQZG20pQQQB4KrOWzX3G0r1YHLMiDmmVFu/g==",
-        "dependencies": {
-          "bluebird": "bluebird@2.11.0",
-          "promisify-any": "promisify-any@2.0.1"
-        }
-      },
-      "promisify-any@2.0.1": {
-        "integrity": "sha512-pVaGouFbTVxqpVJ+T5A15olNJDASAZHYq5cXz6mWdr6/X34mVWiG9MSdzHTcVBCv4aqBP7wGspi7BUSRbEmhsw==",
-        "dependencies": {
-          "bluebird": "bluebird@2.11.0",
-          "co-bluebird": "co-bluebird@1.1.0",
-          "is-generator": "is-generator@1.0.3"
-        }
-      },
-      "serializr@3.0.2": {
-        "integrity": "sha512-bCACTuCiAEjtk1NxkATc3yz2j/8OoaWYxRkC4D5yq0ikZeLO7KLmmI/owmvJ/N4vS9SX4fZTXgSmsNzWtxDJ/Q==",
-        "dependencies": {}
-      }
-    }
   }
 }

@@ -1,5 +1,9 @@
 import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
 import {
+  isAnySerializedString,
+  SerializedString,
+} from "./marshall/serialized.ts";
+import {
   Action,
   isJournalEntry,
   isMessageEventWithType,
@@ -40,7 +44,7 @@ function getSnapshotKey(timestamp: Timestamp): Deno.KvKey {
 }
 
 export type PrevalenceOptions<M extends Model<M>> = {
-  marshaller: Marshaller<M, string>;
+  marshaller: Marshaller<M>;
   classes: SerializableClassesContainer;
   clock: Clock;
   kv: ReturnsOr<PromiseOr<Deno.Kv>>;
@@ -48,7 +52,7 @@ export type PrevalenceOptions<M extends Model<M>> = {
 
 export function defaultPrevalenceOptions<M extends Model<M>>(
   classes: SerializableClassesContainer = {},
-  marshaller: Marshaller<M, string> = new SuperserialMarshaller(
+  marshaller: Marshaller<M> = new SuperserialMarshaller(
     new Serializer({ classes }),
   ),
 ): PrevalenceOptions<M> {
@@ -74,8 +78,7 @@ export function defaultPrevalenceOptions<M extends Model<M>>(
  */
 export class Prevalence<M extends Model<M>> {
   private readonly modelHolder: ModelHolder<M>;
-  private readonly marshaller: Marshaller<M, string>;
-  private readonly classes: SerializableClassesContainer;
+  private readonly marshaller: Marshaller<M>;
   private readonly clock: Clock;
   private readonly kvPromise: Promise<Deno.Kv>;
   get name(): string {
@@ -108,7 +111,6 @@ export class Prevalence<M extends Model<M>> {
     options: PrevalenceOptions<M>,
   ) {
     this.modelHolder = modelHolder;
-    this.classes = options.classes;
     this.marshaller = options.marshaller;
     this.clock = options.clock;
     this.kvPromise = resolve(options.kv);
@@ -129,10 +131,14 @@ export class Prevalence<M extends Model<M>> {
   async execute<A extends Action<M>>(action: A): Promise<void> {
     const log = log0.sub(Prevalence.prototype.execute.name);
     log("action =", action);
-    const journalEntry: JournalEntry<M> = await this.testOnCopyAndAppend(
-      action,
-    );
-    await this.modelHolder.waitForJournalEntryApplied(journalEntry.id);
+    console.log("action =", action);
+    const journalEntryAppended: JournalEntryAppended<M> = await this
+      .testOnCopyAndAppend(
+        action,
+      );
+    console.log("journalEntry =", journalEntryAppended);
+    await this.modelHolder.waitForJournalEntryApplied(journalEntryAppended.id);
+    console.log("journalEntry applied");
   }
 
   get model(): M {
@@ -161,6 +167,9 @@ export class Prevalence<M extends Model<M>> {
 
     if (isMessageJournalEntryAppended(message)) {
       return await this.checkAndApplyJournalEntries(message);
+    }
+    if (type === MESSAGE_TYPE.JOURNAL_ENTRY_APPLIED) {
+      return;
     }
 
     throw new Error(`Unknown message type: ${type}`);
@@ -259,7 +268,11 @@ export class Prevalence<M extends Model<M>> {
       lastEntryId === sinceJournalEntryId + 1n &&
       journalEntryAppended?.id === lastEntryId
     ) {
-      return [journalEntryAppended];
+      return [
+        this.marshaller.deserializeJournalEntry(
+          journalEntryAppended.journalEntry,
+        ),
+      ];
     }
 
     // fetch the new entries from Deno.Kv
@@ -267,8 +280,13 @@ export class Prevalence<M extends Model<M>> {
       .map(this.getEntryKey);
     log("entryKeys =", entryKeys);
     const kv: Deno.Kv = await this.kvPromise;
-    return (await kv.getMany(entryKeys))
+    const kvEntryMaybes: Deno.KvEntryMaybe<string>[] = await kv.getMany<
+      string[]
+    >(entryKeys);
+    return kvEntryMaybes
       .map(prop("value"))
+      .filter(isAnySerializedString)
+      .map(this.marshaller.deserializeJournalEntry.bind(this.marshaller))
       .filter(isJournalEntry)
       .map(identity<JournalEntry<M>>);
   }
@@ -364,8 +382,13 @@ export class Prevalence<M extends Model<M>> {
             }
 
             const id: bigint = 1n + lastEntryId;
-            const entry: JournalEntry<M> = { id, timestamp, action };
-            const serializedEntry: string = this.marshaller
+            const entry: JournalEntry<M> = {
+              id,
+              timestamp,
+              action,
+            };
+            const serializedEntry: SerializedString<JournalEntry<M>> = this
+              .marshaller
               .serializeJournalEntry(
                 entry,
               );
@@ -384,8 +407,7 @@ export class Prevalence<M extends Model<M>> {
             const message: JournalEntryAppended<M> = {
               type: MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED,
               id,
-              action,
-              timestamp,
+              journalEntry: serializedEntry,
             };
             this.modelHolder.broadcastChannel.postMessage(message);
             return message;

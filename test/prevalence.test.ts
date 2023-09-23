@@ -1,7 +1,7 @@
 import { describe, it } from "https://deno.land/std@0.198.0/testing/bdd.ts";
 import { assertEquals } from "https://deno.land/std@0.198.0/assert/assert_equals.ts";
 import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
-import { Action, type Clock, Prevalence } from "../mod.ts";
+import { Action, Prevalence } from "../mod.ts";
 import { assertInstanceOf } from "https://deno.land/std@0.198.0/assert/assert_instance_of.ts";
 
 class Post {
@@ -119,11 +119,17 @@ describe("prevalence", () => {
   test(
     "Add a post",
     async (system) => {
+      console.log("Add a post: 1");
       const post = new Post("3", "Goodbye");
+      console.log("Add a post: 2");
       const action: Action<MyModel> = new AddPostAction(post);
+      console.log("Add a post: 3");
       await system.execute(action);
+      console.log("Add a post: 4");
       assertEquals(system.model.posts.length, 3);
+      console.log("Add a post: 5");
       assertEquals(system.model.posts[2], post);
+      console.log("Add a post: 6");
     },
   );
   test(
