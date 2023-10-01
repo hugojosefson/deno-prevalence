@@ -16,17 +16,11 @@ describe("prevalence", () => {
   test(
     "Add a post",
     async (system) => {
-      console.log("Add a post: 1");
       const post = new Post("3", "Goodbye");
-      console.log("Add a post: 2");
       const action: Action<MyModel> = new AddPostAction(post);
-      console.log("Add a post: 3");
       await system.execute(action);
-      console.log("Add a post: 4");
       assertEquals(system.model.posts.length, 3);
-      console.log("Add a post: 5");
       assertEquals(system.model.posts[2], post);
-      console.log("Add a post: 6");
     },
   );
   test(

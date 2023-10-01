@@ -131,14 +131,11 @@ export class Prevalence<M extends Model<M>> {
   async execute<A extends Action<M>>(action: A): Promise<void> {
     const log = log0.sub(Prevalence.prototype.execute.name);
     log("action =", action);
-    console.log("action =", action);
     const journalEntryAppended: JournalEntryAppended<M> = await this
       .testOnCopyAndAppend(
         action,
       );
-    console.log("journalEntry =", journalEntryAppended);
     await this.modelHolder.waitForJournalEntryApplied(journalEntryAppended.id);
-    console.log("journalEntry applied");
   }
 
   get model(): M {
