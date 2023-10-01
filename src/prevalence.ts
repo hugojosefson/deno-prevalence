@@ -207,7 +207,6 @@ export class Prevalence<M extends Model<M>> {
       const journalEntries: JournalEntries<M> = await this
         .loadJournalEntriesSince(
           lastAppliedJournalEntryId,
-          /** TODO: deserialize here? and when we load them from db? */
           message,
         );
       log("journalEntries =", journalEntries);
