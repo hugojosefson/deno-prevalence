@@ -1,6 +1,6 @@
-import { assertEquals } from "https://deno.land/std@0.202.0/assert/assert_equals.ts";
-import { assertInstanceOf } from "https://deno.land/std@0.202.0/assert/assert_instance_of.ts";
-import { describe } from "https://deno.land/std@0.202.0/testing/bdd.ts";
+import { assertEquals } from "https://deno.land/std@0.203.0/assert/assert_equals.ts";
+import { assertInstanceOf } from "https://deno.land/std@0.203.0/assert/assert_instance_of.ts";
+import { describe } from "https://deno.land/std@0.203.0/testing/bdd.ts";
 import { Action } from "../mod.ts";
 import { AddPostAction } from "./add-post-action.ts";
 import { AddUserAction } from "./add-user-action.ts";

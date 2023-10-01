@@ -1,5 +1,5 @@
-import { it } from "https://deno.land/std@0.202.0/testing/bdd.ts";
-import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
+import { it } from "https://deno.land/std@0.203.0/testing/bdd.ts";
+import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/using.ts";
 import { Prevalence } from "../src/prevalence.ts";
 import { MyModel } from "./fixture-types.ts";
 import { getFixture } from "./get-fixture.ts";

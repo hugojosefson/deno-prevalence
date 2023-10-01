@@ -1,4 +1,4 @@
-import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
+import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/using.ts";
 import {
   isAnySerializedString,
   SerializedString,

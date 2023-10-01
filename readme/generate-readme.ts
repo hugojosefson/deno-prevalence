@@ -3,7 +3,7 @@ import {
   dirname,
   relative,
   resolve,
-} from "https://deno.land/std@0.202.0/path/mod.ts";
+} from "https://deno.land/std@0.203.0/path/mod.ts";
 
 /**
  * This program generates the README.md for the root directory.

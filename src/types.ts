@@ -1,5 +1,6 @@
-import "https://deno.land/x/websocket_broadcastchannel@0.8.0/polyfill.ts";
-import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.7.0/src/using.ts";
+import { polyfillBroadcastChannel } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/mod.ts";
+polyfillBroadcastChannel();
+import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/using.ts";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import { SerializedString } from "./marshall/serialized.ts";
