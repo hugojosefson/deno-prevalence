@@ -1,8 +1,10 @@
 import { it } from "https://deno.land/std@0.203.0/testing/bdd.ts";
 import { using as usingResource } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/using.ts";
-import { Prevalence } from "../src/prevalence.ts";
-import { MyModel } from "./fixture-types.ts";
-import { getFixture } from "./get-fixture.ts";
+import { Prevalence } from "../../src/prevalence.ts";
+import { MyModel } from "../fixture-types.ts";
+import { getFixtureCreator } from "../get-fixture.ts";
+
+const createFixture = getFixtureCreator(() => Deno.openKv(":memory:"));
 
 type TestCase = (system: Prevalence<MyModel>) => Promise<void> | void;
 
@@ -38,7 +40,7 @@ export function test(
 
   it(name, async () => {
     await usingResource(
-      [getFixture],
+      [createFixture],
       ([system]) => effectiveTestCase(system),
     );
   });

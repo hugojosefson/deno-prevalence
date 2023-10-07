@@ -45,7 +45,7 @@ deno run         \
 
 For further usage examples, see the tests:
 
-- [test/prevalence.test.ts](test/prevalence.test.ts)
+- [test/in-memory/prevalence-in-memory.test.ts](test/in-memory/prevalence-in-memory.test.ts)
 
 ## TODO
 
