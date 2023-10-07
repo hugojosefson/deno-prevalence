@@ -1,4 +1,4 @@
-export { Prevalence } from "./src/prevalence.ts";
+export { Prevalence, type PrevalenceOptions } from "./src/prevalence.ts";
 
 export type { Marshaller } from "./src/marshall/marshaller.ts";
 export {
