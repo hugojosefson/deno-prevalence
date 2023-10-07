@@ -116,7 +116,7 @@ export interface Action<M extends Model<M>> {
 export type Query<M extends Model<M>, R> = (
   model: Readonly<M>,
   clock: Clock,
-) => R;
+) => Readonly<R> | Promise<Readonly<R>>;
 
 /**
  * A `JournalEntry` is a {@link Timestamp}ed {@link Action}.
