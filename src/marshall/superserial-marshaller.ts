@@ -1,4 +1,8 @@
-import { Serializer } from "https://deno.land/x/superserial@0.3.4/mod.ts";
+import {
+  Serializer,
+  toDeserialize,
+  toSerialize,
+} from "https://deno.land/x/superserial@0.3.4/mod.ts";
 import { JournalEntry, Model } from "../types.ts";
 import { Marshaller } from "./marshaller.ts";
 import {
@@ -6,6 +10,8 @@ import {
   SERIALIZED_STRING_PREFIX,
   SerializedString,
 } from "./serialized.ts";
+
+export { toDeserialize, toSerialize };
 
 export class SuperserialMarshaller<
   M extends Model<M>,
