@@ -13,6 +13,7 @@ export type {
   JSONValue,
   KvValue,
   Model,
+  Query,
   SerializableClassesContainer,
 } from "./src/types.ts";
 
