@@ -288,14 +288,18 @@ export class Prevalence<M extends Model<M>> {
   }
 
   /**
-   * Get the `id` for the last appended {@link JournalEntry} in the journal.
+   * Get the `id` for the last appended {@link JournalEntry} in the journal, or 0n if there are no entries.
    * @private
    * @returns Promise<bigint> a `Promise` that resolves to the `id` of the last
-   * {@link JournalEntry} in the journal.
+   * {@link JournalEntry} in the journal, or 0n if there are no entries.
    */
   private async getLastEntryId(): Promise<bigint> {
     const lastEntryIdResponse: Deno.KvEntryMaybe<bigint> = await this
       .getLastEntryIdResponse();
+
+    if (lastEntryIdResponse.value === null) {
+      return 0n;
+    }
 
     if (typeof lastEntryIdResponse.value !== "bigint") {
       throw new Error(
