@@ -1,5 +1,4 @@
-import { polyfillBroadcastChannel } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/mod.ts";
-polyfillBroadcastChannel();
+import { WebSocketBroadcastChannel } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/mod.ts";
 import { Symbol } from "https://deno.land/x/websocket_broadcastchannel@0.8.0/src/using.ts";
 import { Clock, Timestamp } from "./clock.ts";
 import { SerializerOptions } from "https://deno.land/x/superserial@0.3.4/mod.ts";
@@ -46,8 +45,8 @@ export class ModelHolder<M extends Model<M>> {
     this.name = name;
     this.model = new Synchronized<M>(model);
     this.copy = new Synchronized<Wrapper<M>>(wrap<M>(undefined));
-    this.broadcastChannel = new BroadcastChannel(name);
-    this.listeningChannel = new BroadcastChannel(name);
+    this.broadcastChannel = new WebSocketBroadcastChannel(name);
+    this.listeningChannel = new WebSocketBroadcastChannel(name);
   }
 
   /**
