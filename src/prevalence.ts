@@ -6,6 +6,7 @@ import {
 import {
   Action,
   isJournalEntry,
+  isMessageBooted,
   isMessageEventWithType,
   isMessageJournalEntryAppended,
   JournalEntries,
@@ -119,6 +120,10 @@ export class Prevalence<M extends Model<M>> {
       "message",
       this.routeIncomingMessage.bind(this),
     );
+
+    this.modelHolder.broadcastChannel.postMessage({
+      type: MESSAGE_TYPE.BOOTED,
+    });
   }
 
   /**
@@ -162,6 +167,9 @@ export class Prevalence<M extends Model<M>> {
     const type: MessageType = message.type;
     log("type =", type);
 
+    if (isMessageBooted(message)) {
+      return await this.checkAndApplyJournalEntries();
+    }
     if (isMessageJournalEntryAppended(message)) {
       return await this.checkAndApplyJournalEntries(message);
     }

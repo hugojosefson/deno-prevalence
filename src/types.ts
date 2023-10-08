@@ -256,6 +256,7 @@ export function isMessageEventWithType<M extends Model<M>>(
  * The valid values for the a {@link MessageType}.
  */
 export const MESSAGE_TYPE = {
+  BOOTED: "BOOTED",
   JOURNAL_ENTRY_APPENDED: "JOURNAL_ENTRY_APPENDED",
   JOURNAL_ENTRY_APPLIED: "JOURNAL_ENTRY_APPLIED",
 } as const;
@@ -281,6 +282,10 @@ export interface JournalEntryAppended<M extends Model<M>>
   type: typeof MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED;
   id: JournalEntry<M>["id"];
   journalEntry: SerializedString<JournalEntry<M>>;
+}
+
+export interface Booted<M extends Model<M>> extends MessageWithType<M> {
+  type: typeof MESSAGE_TYPE.BOOTED;
 }
 
 /**
@@ -318,6 +323,16 @@ export function isMessageJournalEntryAppended<M extends Model<M>>(
   data: unknown,
 ): data is JournalEntryAppended<M> {
   return isMessageWithSpecificType(data, MESSAGE_TYPE.JOURNAL_ENTRY_APPENDED);
+}
+
+/**
+ * Type-guard for {@link Booted}.
+ * @param data Potential {@link Booted}.
+ */
+export function isMessageBooted<M extends Model<M>>(
+  data: unknown,
+): data is Booted<M> {
+  return isMessageWithSpecificType(data, MESSAGE_TYPE.BOOTED);
 }
 
 /**
