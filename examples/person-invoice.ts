@@ -1,11 +1,9 @@
 #!/usr/bin/env -S deno run --unstable --allow-env=DEBUG --allow-write=example-person-invoice.db --allow-read=example-person-invoice.db
 import {
   Action,
-  KvPersister,
   logger,
   Marshaller,
   Model,
-  Persister,
   Prevalence,
   SerializableClassesContainer,
   SuperserialMarshaller,
@@ -71,20 +69,21 @@ const classes: SerializableClassesContainer = {
   RemoveUserAction,
 };
 
-const marshaller: Marshaller<MyModel, string> = new SuperserialMarshaller<
+const marshaller: Marshaller<MyModel> = new SuperserialMarshaller<
   MyModel
 >(
   new Serializer({ classes }),
 );
 const kv: Deno.Kv = await Deno.openKv("example-person-invoice.db");
-const persister: Persister<MyModel> = new KvPersister<MyModel, string>(
-  marshaller,
-  kv,
-);
 const defaultInitialModel: MyModel = { posts: {}, users: {} };
-const prevalence: Prevalence<MyModel> = await Prevalence.create<MyModel>(
+const prevalence: Prevalence<MyModel> = Prevalence.create<MyModel>(
+  "example-person-invoice",
   defaultInitialModel,
-  { persister, classes },
+  {
+    classes,
+    kv,
+    marshaller,
+  },
 );
 
 await prevalence.execute(new AddPostAction({ id: "post#1", subject: "Lorem" }));
@@ -93,20 +92,20 @@ await prevalence.execute(new AddPostAction({ id: "post#3", subject: "Dolor" }));
 await prevalence.execute(new RemovePostAction("post#2"));
 await prevalence.execute(new AddUserAction(alice));
 
-const posts: Post[] = Object.values(prevalence.model.posts);
+const posts: Post[] = []; //Object.values(prevalence.model.posts);
 
 log("Posts:");
 for (const post of posts) {
   log(`${post.id}: ${post.subject}`);
 }
 log("Users:");
-for (const user of Object.values(prevalence.model.users)) {
+for (const user of [] as User[] /*Object.values(prevalence.model.users)*/) {
   log(`${user.uuid}: ${user.displayName}`);
 }
 
 await prevalence.execute(new RemoveUserAction(alice.uuid));
 log("Users:");
-for (const user of Object.values(prevalence.model.users)) {
+for (const user of [] as User[] /*Object.values(prevalence.model.users)*/) {
   log(`${user.uuid}: ${user.displayName}`);
 }
 
