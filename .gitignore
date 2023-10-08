@@ -1,4 +1,6 @@
 /*.log
 .*.swp
 *.db
+*.db-shm
+*.db-wal
 /README.html
